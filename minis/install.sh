@@ -15,8 +15,8 @@ BASE="${SIBOOT_BASE:-https://raw.githubusercontent.com/NexSideloading/NexSideloa
 # Of bin/siboot-aarch64, updated with it: a download that doesn't match (an
 # error page, a cut-off transfer) is never run. SIZE only draws the progress
 # bar.
-SHA256="ff8f27fdc00e20dcd12fdaf00011c48ef13a00691e0c28c8a91dd8045b3931f1"
-SIZE=11553184
+SHA256=06a89c33a73e7a663b434280106053b25d9324d686cab19c0d2b1b0d49b010f3
+SIZE=11519776
 
 DIR="$HOME/.siboot/bin"
 BIN="$DIR/siboot"
