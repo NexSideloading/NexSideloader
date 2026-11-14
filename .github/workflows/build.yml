@@ -5,6 +5,11 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+# The last step commits the built binary and pushes it back; the default
+# GITHUB_TOKEN permissions are read-only, so write access must be granted.
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
