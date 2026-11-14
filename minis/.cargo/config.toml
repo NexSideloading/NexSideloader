@@ -1,0 +1,17 @@
+# Cross-link for Open Minis' aarch64 musl shell.
+#
+# Since Rust 1.98 rustc passes `-Wl,--fix-cortex-a53-843419` (the Cortex-A53
+# erratum 843419 workaround) to the linker for aarch64-unknown-linux-musl,
+# but only with the gcc linker flavor — musl-cross-make's binutils ld.bfd
+# rejects it (rust-lang/rust#161486). Link with rust-lld instead, which
+# supports the flag, and pass it directly.
+[target.aarch64-unknown-linux-musl]
+linker = "rust-lld"
+rustflags = [
+  "-C", "linker-flavor=ld.lld",
+  "-C", "link-arg=--fix-cortex-a53-843419",
+  # Same flags the build workflow passes via RUSTFLAGS; target rustflags
+  # take precedence over it, so they are repeated here.
+  "-C", "target-feature=+crt-static",
+  "-C", "relocation-model=static",
+]

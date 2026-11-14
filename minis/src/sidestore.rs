@@ -31,11 +31,9 @@ pub fn split_pairing_file(data: &[u8], udid: Option<&str>) -> Result<SideStorePa
 
     // Extract lockdown keys (everything that's not RPPairing)
     let mut lockdown_dict = plist::Dictionary::new();
-    let mut has_lockdown = false;
     for (key, value) in parsed.iter() {
         if !REMOTE_ALL_KEYS.contains(&key.as_str()) {
             lockdown_dict.insert(key.clone(), value.clone());
-            has_lockdown = true;
         }
     }
 

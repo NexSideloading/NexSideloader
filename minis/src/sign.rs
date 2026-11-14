@@ -29,13 +29,6 @@ pub enum AppTarget {
 }
 
 impl AppTarget {
-    pub fn name(self) -> &'static str {
-        match self {
-            AppTarget::SideStore => "SideStore",
-            AppTarget::LiveContainer => "LiveContainer",
-        }
-    }
-
     pub fn download_url(self) -> &'static str {
         match self {
             AppTarget::SideStore => SIDESTORE_IPA,
