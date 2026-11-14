@@ -9,10 +9,10 @@ const LOCKDOWN_KEYS: &[&str] = &[
 ];
 
 /// The keys required for an RPPairing record.
-const REMOTE_KEYS: &[&str] = ["private_key", "public_key", "identifier"];
+const REMOTE_KEYS: &[&str] = &["private_key", "public_key", "identifier"];
 
 /// All RPPairing keys, including optional ones.
-const REMOTE_ALL_KEYS: &[&str] = ["private_key", "public_key", "identifier", "alt_irk"];
+const REMOTE_ALL_KEYS: &[&str] = &["private_key", "public_key", "identifier", "alt_irk"];
 
 /// The three pairing files SideStore needs.
 pub struct SideStorePairingFiles {
@@ -41,10 +41,8 @@ pub fn split_pairing_file(data: &[u8], udid: Option<&str>) -> Result<SideStorePa
 
     // Add UDID if missing and provided
     if let Some(udid) = udid {
-        if !udid.is_empty() {
-            lockdown_dict
-                .entry("UDID".into())
-                .or_insert_with(|| udid.into());
+        if !udid.is_empty() && !lockdown_dict.contains_key("UDID") {
+            lockdown_dict.insert("UDID".into(), udid.into());
         }
     }
 
@@ -88,6 +86,10 @@ pub fn split_pairing_file(data: &[u8], udid: Option<&str>) -> Result<SideStorePa
 
 /// Serialize a plist dictionary to XML bytes.
 fn serialize_plist(dict: &plist::Dictionary) -> Result<Vec<u8>> {
-    plist::to_writer_xml(Vec::new(), dict)
-        .map_err(|e| Fail::new("Couldn't serialize pairing record.", e.to_string()))
+    let mut bytes = Vec::new();
+
+    plist::to_writer_xml(&mut bytes, dict)
+        .map_err(|e| Fail::new("Couldn't serialize pairing record.", e.to_string()))?;
+
+    Ok(bytes)
 }

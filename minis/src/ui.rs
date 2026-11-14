@@ -856,7 +856,6 @@ pub fn choose(title: &str, options: &[String]) -> Option<usize> {
 /// Ask a menu question with labeled options. Returns the selected label.
 pub fn ask_menu(question: &str, options: &[(&str, &str)]) -> Option<String> {
     let options_str: Vec<String> = options.iter().map(|(label, _)| label.to_string()).collect();
-    let descriptions: Vec<String> = options.iter().map(|(_, desc)| desc.to_string()).collect();
     let display_options: Vec<String> = options.iter()
         .map(|(label, desc)| format!("{} - {}", label, desc))
         .collect();

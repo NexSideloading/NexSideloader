@@ -21,11 +21,36 @@ jobs:
         toolchain: stable
         target: aarch64-unknown-linux-musl
     
+
     - name: Install aarch64-linux-musl cross-compilation tools
       run: |
-        sudo apt-get update
-        sudo apt-get install -y musl-tools musl-dev
-        rustup target add aarch64-unknown-linux-musl
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            git \
+            wget \
+            curl \
+            ca-certificates \
+            xz-utils \
+            bison \
+            flex \
+            texinfo \
+            gawk
+
+          git clone --depth 1 https://github.com/richfelker/musl-cross-make.git
+          cd musl-cross-make
+
+          cat > config.mak <<'EOF'
+          TARGET = aarch64-linux-musl
+          OUTPUT = /opt/cross
+          EOF
+
+          make -j"$(nproc)"
+          sudo make install
+
+          echo "/opt/cross/bin" >> "$GITHUB_PATH"
+
+          rustup target add aarch64-unknown-linux-musl
     
     - name: Cache cargo registry
       uses: actions/cache@v4
@@ -49,9 +74,17 @@ jobs:
       run: |
         cd minis
         RUSTFLAGS="-C target-feature=+crt-static -C relocation-model=static" \
-          cargo build --release --locked --target aarch64-unknown-linux-musl
+          cargo build --release --target aarch64-unknown-linux-musl
     
-    - name: Calculate SHA256 and size
+    - name: Build siboot-pair.wasm
+      run: |
+        cd rootshell
+        rustup target add wasm32-wasip1
+        cargo build --release --target wasm32-wasip1
+        mkdir -p bin
+        cp target/wasm32-wasip1/release/siboot-pair.wasm bin/
+    
+    - name: Calculate SHA256 and size for NexSideloader
       id: hash
       run: |
         cd minis
@@ -62,6 +95,15 @@ jobs:
         echo "size=$SIZE" >> $GITHUB_OUTPUT
         echo "Binary SHA256: $SHA256"
         echo "Binary size: $SIZE bytes"
+    
+    - name: Calculate SHA256 for siboot-pair.wasm
+      id: wasm_hash
+      run: |
+        cd rootshell
+        WASM="bin/siboot-pair.wasm"
+        SHA256=$(sha256sum "$WASM" | awk '{print $1}')
+        echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+        echo "WASM SHA256: $SHA256"
     
     - name: Copy binary to bin directory
       run: |
@@ -89,11 +131,8 @@ jobs:
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
-        git add minis/bin/NexSideloader-aarch64 minis/install.sh
-        git diff --staged --quiet || git commit -m "Build: Update NexSideloader binary and install.sh
-
-- SHA256: ${{ steps.hash.outputs.sha256 }}
-- Size: ${{ steps.hash.outputs.size }} bytes"
+        git add minis/bin/NexSideloader-aarch64 minis/install.sh rootshell/bin/siboot-pair.wasm
+        git diff --staged --quiet || git commit -m "Build: Update NexSideloader binary, siboot-pair.wasm and install.sh" -m "NexSideloader SHA256: ${{ steps.hash.outputs.sha256 }}" -m "NexSideloader Size: ${{ steps.hash.outputs.size }} bytes" -m "siboot-pair.wasm SHA256: ${{ steps.wasm_hash.outputs.sha256 }}"
     
     - name: Push changes
       uses: ad-m/github-push-action@master

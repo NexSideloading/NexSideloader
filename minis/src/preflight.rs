@@ -50,7 +50,7 @@ async fn check_online(args: &Args) -> Result<()> {
         .as_deref()
         .is_none_or(|ipa| ipa.starts_with("http"));
     if downloads {
-        let url = args.ipa.as_deref().unwrap_or(crate::sign::RELEASE_IPA);
+        let url = args.ipa.as_deref().unwrap_or(crate::sign::SIDESTORE_IPA);
         ui::activity("reaching GitHub");
         match client.head(url).send().await {
             Ok(r) if r.status().is_success() => {
