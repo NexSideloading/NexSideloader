@@ -1,0 +1,102 @@
+name: Build NexSideloader
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Install Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: stable
+        target: aarch64-unknown-linux-musl
+    
+    - name: Install aarch64-linux-musl cross-compilation tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y musl-tools musl-dev
+        rustup target add aarch64-unknown-linux-musl
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v4
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Build NexSideloader
+      run: |
+        cd minis
+        RUSTFLAGS="-C target-feature=+crt-static -C relocation-model=static" \
+          cargo build --release --locked --target aarch64-unknown-linux-musl
+    
+    - name: Calculate SHA256 and size
+      id: hash
+      run: |
+        cd minis
+        BINARY="target/aarch64-unknown-linux-musl/release/nexsideloader"
+        SHA256=$(sha256sum "$BINARY" | awk '{print $1}')
+        SIZE=$(stat -c%s "$BINARY")
+        echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+        echo "size=$SIZE" >> $GITHUB_OUTPUT
+        echo "Binary SHA256: $SHA256"
+        echo "Binary size: $SIZE bytes"
+    
+    - name: Copy binary to bin directory
+      run: |
+        cd minis
+        mkdir -p bin
+        cp target/aarch64-unknown-linux-musl/release/nexsideloader bin/NexSideloader-aarch64
+        chmod +x bin/NexSideloader-aarch64
+    
+    - name: Update install.sh with new SHA256 and SIZE
+      run: |
+        cd minis
+        SHA256="${{ steps.hash.outputs.sha256 }}"
+        SIZE="${{ steps.hash.outputs.size }}"
+        
+        # Update SHA256 in install.sh
+        sed -i "s/^SHA256=.*/SHA256=$SHA256/" install.sh
+        
+        # Update SIZE in install.sh
+        sed -i "s/^SIZE=.*/SIZE=$SIZE/" install.sh
+        
+        echo "Updated install.sh:"
+        grep -E "^SHA256=|^SIZE=" install.sh
+    
+    - name: Commit changes
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add minis/bin/NexSideloader-aarch64 minis/install.sh
+        git diff --staged --quiet || git commit -m "Build: Update NexSideloader binary and install.sh
+
+- SHA256: ${{ steps.hash.outputs.sha256 }}
+- Size: ${{ steps.hash.outputs.size }} bytes"
+    
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ github.ref }}

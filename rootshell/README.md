@@ -1,10 +1,12 @@
 # siboot-pair for rootshell
 
-siboot's pairing step, as a WASM program for
+NexSideloader's pairing step, as a WASM program for
 [rootshell](https://apps.apple.com/app/rootshell-local-terminal-ssh/id6755794662)
 ("rootshell - Local Terminal & SSH", free, App Store). It pairs the iPhone with
-itself, then hands the pairing file to siboot in Open Minis
-([`../minis`](../minis)), which signs and installs SideInstaller.
+itself, then hands the pairing file to NexSideloader in Open Minis
+([`../minis`](../minis)), which signs and installs SideStore or SideStore+LiveContainer.
+
+Original SideInstaller Bootstrap by FrizzleM, modified by NovaDev404.
 
 ## Running it
 
@@ -15,21 +17,21 @@ its local shell, one line at a time (rootshell doesn't run them joined with
 `&&`):
 
 ```sh
-curl -fsSLO https://raw.githubusercontent.com/FrizzleM/siboot/main/rootshell/bin/siboot-pair.wasm
+curl -fsSLO https://raw.githubusercontent.com/FrizzleM/NexSideloader/main/rootshell/bin/siboot-pair.wasm
 ifconfig en0 > ifconfig.txt
 ./siboot-pair.wasm
 ```
 
 Open **Settings › Privacy & Security › Developer Mode**, scroll to the bottom,
-tap **Pair with siboot**, and enter your passcode and the 6-digit code
+tap **Pair with NexSideloader**, and enter your passcode and the 6-digit code
 siboot-pair shows in large digits (it also arrives as a notification). Leave
 rootshell running, and in Open Minis's terminal run:
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/FrizzleM/siboot/main/minis/install.sh | sh
+wget -qO- https://raw.githubusercontent.com/FrizzleM/NexSideloader/main/minis/install.sh | sh
 ```
 
-The first time, siboot asks for the transfer code siboot-pair shows (in large
+The first time, NexSideloader asks for the transfer code siboot-pair shows (in large
 digits, and as a notification you can pull down in Minis) and takes the pairing
 file. After that it uses the file it saved and doesn't ask, so siboot-pair keeps
 offering until you close its tab.
@@ -74,7 +76,7 @@ Preview 1 programs, and lends them sockets (`rootshell_socket_*`).
 4. Writes `rp_pairing_file.plist` and `host_alt_irk` into rootshell's folder,
    so a second run keeps the same host identity, and withdraws the announcement.
 5. Offers the file on the iPhone's own loopback, port 61207, behind a 6-digit
-   transfer code, which siboot in Minis asks for, shown and posted the same
+   transfer code, which NexSideloader in Minis asks for, shown and posted the same
    way. The code keeps other apps on the iPhone from taking the file: five
    wrong ones end the offer.
 
@@ -109,18 +111,18 @@ the log (no codes in it) and its base64 for OSC 52.
 ## What's been tested
 
 - **On an iPhone (iOS 27, November 2026):** this route end to end. siboot-pair
-  0.1.0 paired in rootshell, and siboot 0.12.0 in Open Minis's App Store build
+  0.1.0 paired in rootshell, and NexSideloader 0.12.0 in Open Minis's App Store build
   installed SideInstaller with the file.
 - **0.2.0** is 0.1.0 with the other ways in taken out: the address now comes
   only from `ifconfig.txt` (no pipe, no address argument), `--name` and `--out`
   are gone, and so is the Files app fallback. Its `.wasm` imports a subset of
   what 0.1.0's did. Tested with `cargo test` on a Mac; not yet run on an iPhone.
-- **0.2.1** only adds a line saying siboot may go ahead without asking.
+- **0.2.1** only adds a line saying NexSideloader may go ahead without asking.
 - **0.3.0** is 0.2.1 with the screen above, the transfer code as a notification
   too, and `--plain`; pairing and the hand-off are unchanged. Tested with
   `cargo test` on a Mac (14 tests), and the host build end to end on the Mac's
   loopback in a 40-column terminal, against the tests' fake iPhone and a
-  stand-in for siboot's side: a stray connection, the pairing, a wrong transfer
+  stand-in for NexSideloader's side: a stray connection, the pairing, a wrong transfer
   code, the hand-off. Its `.wasm` imports the same functions as 0.2.1's. Not yet
   run on an iPhone.
 - **0.4.0** is 0.3.0 with the log above, offered when it stops; pairing and the

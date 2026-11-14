@@ -1,5 +1,5 @@
-//! `siboot` for Open Minis: installs SideInstaller onto the iPhone it runs on,
-//! with no computer and no paid certificate.
+//! `NexSideloader` for Open Minis: installs SideStore or SideStore+LiveContainer onto
+//! the iPhone it runs on, with no computer and no paid certificate.
 //!
 //! Open Minis (App Store) runs Alpine Linux on an ARM64 build of iSH, so this is
 //! an ordinary static aarch64 Linux binary built on the same vendored idevice
@@ -9,12 +9,11 @@
 //!
 //! The steps:
 //! 1 check · 2 pairing · 3 connect · 4 Apple ID · 5 sign · 6 install · 7 hand over.
-//! `siboot developer-mode` runs 1–3, then asks for Developer Mode (devmode.rs).
+//! `NexSideloader developer-mode` runs 1–3, then asks for Developer Mode (devmode.rs).
 //!
 //! The Apple ID password goes only to Apple (as an SRP proof, via isideload) and
-//! is never written to disk or logged. Like SideInstaller, the developer token
-//! and signing key are kept, in ~/.siboot/isideload, so a second run needn't
-//! sign in again.
+//! is never written to disk or logged. The developer token and signing key are
+//! kept, in ~/.NexSideloader/isideload, so a second run needn't sign in again.
 //!
 //! In Open Minis the run shows as a page in Minis's browser, served on this
 //! iPhone's loopback, and asks its questions there (web.rs); `--terminal`
@@ -29,11 +28,12 @@ mod preflight;
 mod report;
 mod seed;
 mod sign;
+mod sidestore;
 mod tunnel;
 mod ui;
 mod web;
 
-// rust-core's saved-session sign-in, compiled here unchanged so siboot signs in
+// rust-core's saved-session sign-in, compiled here unchanged so NexSideloader signs in
 // exactly as SideInstaller does (anisette identity rules, -80046 skip, token
 // reuse). `crate::error_text` is the path it expects.
 #[allow(dead_code)]
@@ -89,7 +89,7 @@ pub struct Args {
     /// (`--terminal`). Neither: the page where there's Minis to show it.
     pub web: Option<bool>,
     pub device: SocketAddr,
-    /// ~/.siboot: the pairing file, isideload's store, downloads.
+    /// ~/.NexSideloader: the pairing file, isideload's store, downloads.
     pub home: PathBuf,
     pub pairing_file: Option<PathBuf>,
     pub apple_id: Option<String>,
@@ -171,7 +171,7 @@ fn parse_args(argv: impl IntoIterator<Item = String>) -> std::result::Result<Par
         }
     }
     if args.turn_on && args.command != Command::DeveloperMode {
-        return Err("--turn-on goes with `siboot developer-mode`".into());
+        return Err("--turn-on goes with `NexSideloader developer-mode`".into());
     }
     Ok(Parsed::Run(args))
 }
@@ -185,17 +185,21 @@ fn usage() {
     println!(
         "\
 {name} {VERSION}
-Installs SideInstaller onto this iPhone, from
-Open Minis, with your own Apple Account.
+Installs SideStore or SideStore+LiveContainer
+onto this iPhone, from Open Minis, with your
+own Apple Account.
+
+Original SideInstaller Bootstrap by FrizzleM,
+modified by NovaDev404.
 
 {usage}
-  siboot [command] [options]
+  NexSideloader [command] [options]
 
   Pair in rootshell first (siboot-pair), and
   leave it running. With no command, every
   step runs: check, take the pairing from
   rootshell, connect, sign in, sign
-  SideInstaller, install it, and hand it the
+  SideStore, install it, and hand it the
   pairing.
 
 {commands}
@@ -212,7 +216,7 @@ Open Minis, with your own Apple Account.
       --turn-on, turn it on instead, after
       asking: the iPhone restarts. iOS allows
       that only without a passcode; with one,
-      siboot shows the switch instead.
+      NexSideloader shows the switch instead.
 
 {options}
   {apple_id}
@@ -221,7 +225,7 @@ Open Minis, with your own Apple Account.
       password comes from SIBOOT_PASSWORD or a
       prompt that shows only dots.
   {ipa}
-      Install this IPA instead of SideInstaller's
+      Install this IPA instead of SideStore's
       latest release.
   {anisette}
       Sign in through this anisette server only.
@@ -234,10 +238,10 @@ Open Minis, with your own Apple Account.
   {port}
       The iPhone's RPPairing port (default {rp}).
   {pairing_file}
-      Default ~/.siboot/rp_pairing_file.plist.
+      Default ~/.NexSideloader/rp_pairing_file.plist.
   {home}
-      Where siboot keeps its files (default
-      ~/.siboot).
+      Where NexSideloader keeps its files (default
+      ~/.siboot - kept from original siboot).
   {terminal}
       Answer here in the terminal, not on the
       page in Minis's browser.
@@ -245,7 +249,7 @@ Open Minis, with your own Apple Account.
       Plain lines instead of the live screen
       in the terminal.
   {web}
-      The page even outside Minis: siboot
+      The page even outside Minis: NexSideloader
       prints its address.
   {verbose}
       Show the underlying protocol and library
@@ -257,7 +261,7 @@ Open Minis, with your own Apple Account.
   iOS 27 or later, Developer Mode on, Wi-Fi,
   LocalDevVPN (App Store) connected, and the
   pairing from siboot-pair in rootshell.",
-        name = head("siboot"),
+        name = head("NexSideloader"),
         usage = head("USAGE"),
         commands = head("COMMANDS"),
         options = head("OPTIONS"),
@@ -287,8 +291,8 @@ fn main() -> ExitCode {
     let parsed = match parse_args(std::env::args().skip(1)) {
         Ok(p) => p,
         Err(problem) => {
-            eprintln!("siboot: {problem}");
-            eprintln!("try `siboot --help`");
+            eprintln!("NexSideloader: {problem}");
+            eprintln!("try `NexSideloader --help`");
             return ExitCode::from(2);
         }
     };
@@ -298,7 +302,7 @@ fn main() -> ExitCode {
             return ExitCode::SUCCESS;
         }
         Parsed::Version => {
-            println!("siboot {VERSION}");
+            println!("NexSideloader {VERSION}");
             return ExitCode::SUCCESS;
         }
         Parsed::Run(args) => args,
@@ -309,7 +313,7 @@ fn main() -> ExitCode {
         match web::start() {
             Ok(url) => Some(url),
             Err(e) => {
-                eprintln!("siboot: couldn't serve the page ({e}), so it runs here instead");
+                eprintln!("NexSideloader: couldn't serve the page ({e}), so it runs here instead");
                 None
             }
         }
@@ -323,7 +327,7 @@ fn main() -> ExitCode {
         if args.command == Command::DeveloperMode {
             "Shows Developer Mode, or turns it on."
         } else {
-            "Installs SideInstaller on this iPhone."
+            "Installs SideStore on this iPhone."
         },
     );
     if let Some(url) = &page {
@@ -381,7 +385,7 @@ fn show_page(url: &str) {
         println!("      The page is open in Minis's browser. Closed it?");
         println!("      Press return here to open it again.");
         println!("      To type here instead, stop with Ctrl-C");
-        println!("      and run siboot --terminal.");
+        println!("      and run NexSideloader --terminal.");
         let url = url.to_string();
         std::thread::spawn(move || {
             use std::io::BufRead;
@@ -467,7 +471,7 @@ async fn pipeline(args: &Args) -> Result<()> {
             ui::plan(&names, DEVMODE_STAGES);
         }
     }
-    // Before the request, a failure also says what siboot can't do without the
+    // Before the request, a failure also says what NexSideloader can't do without the
     // tunnel.
     let note = |f: Fail| if devmode { devmode::unreachable_note(f) } else { f };
 
@@ -479,7 +483,7 @@ async fn pipeline(args: &Args) -> Result<()> {
     let online = preflight::run(args).await.map_err(note)?;
     ui::done(if online { "online, and the iPhone answers" } else { "the iPhone answers" });
     if args.command == Command::Check {
-        ui::finish("Ready", &["Run siboot to install SideInstaller."]);
+        ui::finish("Ready", &["Run NexSideloader to install SideStore."]);
         return Ok(());
     }
 
@@ -516,9 +520,9 @@ async fn pipeline(args: &Args) -> Result<()> {
     let mut session = account::sign_in(args).await?;
     ui::done(&format!("team {}", session.team));
 
-    ui::step(5, "Signing SideInstaller for this iPhone");
-    let ipa = sign::fetch_ipa(args).await?;
-    let signed = sign::sign(&mut session, &ipa, &device).await?;
+    ui::step(5, "Signing for this iPhone");
+    let (ipa, target) = sign::fetch_ipa(args).await?;
+    let signed = sign::sign(&mut session, &ipa, &device, target).await?;
     ui::done(&match &signed.version {
         Some(version) => format!("{} {version} signed", signed.name),
         None => format!("{} signed", signed.name),
@@ -530,24 +534,29 @@ async fn pipeline(args: &Args) -> Result<()> {
     ui::ok(&format!("{} installed ({})", signed.name, signed.bundle_id));
     ui::done(&format!("installed · {uploaded}"));
 
-    ui::step(7, "Handing SideInstaller the pairing");
-    seed::hand_over(&mut connection, &signed.bundle_id, &pairing_path).await?;
-    ui::done("SideInstaller has the pairing");
+    ui::step(7, "Handing SideStore the pairing");
+    seed::hand_over(&mut connection, &signed.bundle_id, &pairing_path, &device.udid).await?;
+    ui::done("SideStore has the pairing");
 
-    // Its own URL scheme (ios-app/Info.plist): the page's button opens it.
-    ui::link("Open SideInstaller", "sideinstaller://");
+    // SideStore's URL scheme
+    let url_scheme = match signed.target {
+        sign::AppTarget::SideStore => "sidestore://",
+        sign::AppTarget::LiveContainer => "livecontainer://",
+    };
+    ui::link(&format!("Open {}", signed.name), url_scheme);
     ui::finish(
-        "SideInstaller is installed",
+        &format!("{} is installed", signed.name),
         &[
-            "Open it from your Home Screen. The first time, iOS asks you to trust your Apple \
-             Account: Settings › General › VPN & Device Management.",
-            "Free accounts' apps last 7 days; SideInstaller can renew itself from then on.",
+            &format!("Open it from your Home Screen. The first time, iOS asks you to trust your Apple \
+             Account: Settings › General › VPN & Device Management."),
+            "Free accounts' apps last 7 days; the app can renew itself from then on.",
+            "The pairing files are in the app's Documents folder.",
         ],
     );
     Ok(())
 }
 
-/// Step 4 of `siboot developer-mode`, through the open tunnel.
+/// Step 4 of `NexSideloader developer-mode`, through the open tunnel.
 async fn developer_mode(args: &Args, connection: &mut tunnel::Connection) -> Result<()> {
     let request = if args.turn_on { devmode::Request::TurnOn } else { devmode::Request::Show };
     let confirm = || ui::confirm("turn it on now?", false);
@@ -575,7 +584,7 @@ async fn developer_mode(args: &Args, connection: &mut tunnel::Connection) -> Res
                 "Developer Mode is in Settings",
                 &[
                     "iOS turns Developer Mode on from here only while the iPhone has no passcode, \
-                     so siboot showed it under Settings › Privacy & Security instead. Turn it on \
+                     so NexSideloader showed it under Settings › Privacy & Security instead. Turn it on \
                      there; iOS restarts to finish.",
                     unlock,
                 ],
@@ -596,7 +605,7 @@ async fn developer_mode(args: &Args, connection: &mut tunnel::Connection) -> Res
                     "It hung up right after the request, as it does when it restarts to turn \
                      Developer Mode on.",
                     unlock,
-                    "If it doesn't restart, run siboot developer-mode again.",
+                    "If it doesn't restart, run NexSideloader developer-mode again.",
                 ],
             );
         }
@@ -620,7 +629,7 @@ mod tests {
         let args = parse("");
         assert_eq!(args.command, Command::All);
         assert_eq!(args.device.to_string(), "10.7.0.1:49152");
-        assert!(args.pairing_path().ends_with(".siboot/rp_pairing_file.plist"));
+        assert!(args.pairing_path().ends_with(".NexSideloader/rp_pairing_file.plist"));
     }
 
     #[test]

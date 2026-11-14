@@ -1,13 +1,13 @@
 [package]
-name = "siboot"
+name = "nexsideloader"
 version = "0.17.0"
 edition = "2021"
-description = "PC-free bootstrap that installs SideInstaller onto the iPhone it runs on, from Open Minis's Linux shell, with the pairing made in rootshell"
+description = "PC-free bootstrap that installs SideStore or SideStore+LiveContainer onto the iPhone it runs on, from Open Minis's Linux shell, with the pairing made in rootshell. Original SideInstaller Bootstrap by FrizzleM, modified by NovaDev404."
 license = "MIT"
 publish = false
 
 [[bin]]
-name = "siboot"
+name = "nexsideloader"
 path = "src/main.rs"
 
 # Its own workspace: this crate builds for

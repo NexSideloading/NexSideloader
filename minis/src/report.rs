@@ -1,9 +1,9 @@
-//! The log siboot offers to copy when a run stops: what the screen showed,
+//! The log NexSideloader offers to copy when a run stops: what the screen showed,
 //! the libraries' own log lines and the underlying error, as plain text.
 //!
 //! It goes to the clipboard through Open Minis's `apple-clipboard set`, which
 //! reads the text on stdin (Minis's terminal ignores OSC 52), and is saved to
-//! ~/.siboot/siboot.log either way. Before either, the Apple Account's email
+//! ~/.siboot/siboot.log either way (kept from original siboot). Before either, the Apple Account's email
 //! and long identifiers (the iPhone's UDID, anisette identities) are cut short:
 //! the log is meant to be pasted where you ask for help. Passwords and codes
 //! never reach it (`ui::record_answer`).
@@ -15,7 +15,7 @@ use std::process::{Command as Process, Stdio};
 use crate::fail::Fail;
 use crate::{ui, Args, Command, VERSION};
 
-pub const LOG_FILE: &str = "siboot.log";
+pub const LOG_FILE: &str = "nexsideloader.log";
 
 /// After a failure the user didn't choose: save the log, and on a terminal or
 /// the page ask whether to copy it.
@@ -63,7 +63,7 @@ fn compose(args: &Args) -> String {
         Command::Connect => "connect",
         Command::DeveloperMode => "developer-mode",
     };
-    let mut out = format!("siboot {VERSION} log · {command}");
+    let mut out = format!("NexSideloader {VERSION} log · {command}");
     let flags = flags_given(std::env::args().skip(1));
     if !flags.is_empty() {
         out.push_str(&format!(" · {}", flags.join(" ")));
@@ -98,7 +98,7 @@ fn system() -> String {
     )
 }
 
-/// `~/.siboot/siboot.log` rather than `/root/.siboot/siboot.log`.
+/// `~/.siboot/nexsideloader.log` rather than `/root/.siboot/nexsideloader.log`.
 fn shown_path(path: &Path) -> String {
     let home = std::env::var_os("HOME").map(PathBuf::from);
     match home.as_deref().and_then(|h| path.strip_prefix(h).ok()) {
@@ -285,7 +285,7 @@ mod tests {
     fn the_home_folder_reads_as_a_tilde() {
         if let Some(home) = std::env::var_os("HOME") {
             let path = PathBuf::from(home).join(".siboot").join(LOG_FILE);
-            assert_eq!(shown_path(&path), "~/.siboot/siboot.log");
+            assert_eq!(shown_path(&path), "~/.siboot/nexsideloader.log");
         }
     }
 }

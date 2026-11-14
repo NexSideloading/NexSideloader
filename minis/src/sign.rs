@@ -1,6 +1,6 @@
-//! Step 5: fetch SideInstaller and sign it for this iPhone, as Side by Side
-//! does for another one: register the device, then isideload's `sign_app`
-//! with the app group and no Increased Memory Limit (`SideBySideView.signApp`).
+//! Step 5: fetch SideStore or SideStore+LiveContainer and sign it for this iPhone,
+//! as Side by Side does for another one: register the device, then isideload's
+//! `sign_app` with the app group and no Increased Memory Limit (`SideBySideView.signApp`).
 
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
@@ -12,9 +12,37 @@ use crate::fail::{Fail, Result};
 use crate::tunnel::DeviceInfo;
 use crate::{ui, Args, VERSION};
 
-/// The release Side by Side installs (`SideBySideView.releaseIPA`).
-pub const RELEASE_IPA: &str =
-    "https://github.com/FrizzleM/SideInstaller/releases/latest/download/SideInstaller.ipa";
+/// The SideStore nightly release.
+pub const SIDESTORE_IPA: &str =
+    "https://github.com/SideStore/SideStore/releases/download/nightly/SideStore.ipa";
+/// The SideStore+LiveContainer nightly release.
+pub const LIVECONTAINER_IPA: &str =
+    "https://github.com/LiveContainer/LiveContainer/releases/download/nightly/LiveContainer+SideStore.ipa";
+
+/// Which app to install.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AppTarget {
+    /// SideStore only.
+    SideStore,
+    /// SideStore with LiveContainer.
+    LiveContainer,
+}
+
+impl AppTarget {
+    pub fn name(self) -> &'static str {
+        match self {
+            AppTarget::SideStore => "SideStore",
+            AppTarget::LiveContainer => "LiveContainer",
+        }
+    }
+
+    pub fn download_url(self) -> &'static str {
+        match self {
+            AppTarget::SideStore => SIDESTORE_IPA,
+            AppTarget::LiveContainer => LIVECONTAINER_IPA,
+        }
+    }
+}
 
 pub struct Signed {
     /// The signed `.app` folder, ready to upload.
@@ -23,38 +51,80 @@ pub struct Signed {
     pub name: String,
     /// `CFBundleShortVersionString`, when it has one.
     pub version: Option<String>,
+    /// Which app was installed.
+    pub target: AppTarget,
 }
 
-/// `--ipa` as a path, or the URL it names, or SideInstaller's latest release.
-pub async fn fetch_ipa(args: &Args) -> Result<PathBuf> {
+/// `--ipa` as a path, or the URL it names, or SideStore's latest release.
+/// If no IPA is specified, asks whether to install SideStore or SideStore+LiveContainer.
+pub async fn fetch_ipa(args: &Args) -> Result<(PathBuf, AppTarget)> {
     match args.ipa.as_deref() {
         Some(source) if !source.starts_with("https://") && !source.starts_with("http://") => {
             let path = PathBuf::from(source);
             check_ipa(&path)?;
             ui::ok(&format!("using {}", path.display()));
-            Ok(path)
+            // Default to SideStore for custom IPAs
+            Ok((path, AppTarget::SideStore))
         }
         source => {
-            let url = source.unwrap_or(RELEASE_IPA);
+            let target = if let Some(url) = source {
+                // If a URL is provided, try to guess which app it is
+                if url.contains("LiveContainer") {
+                    AppTarget::LiveContainer
+                } else {
+                    AppTarget::SideStore
+                }
+            } else {
+                // Ask the user which app to install
+                ask_app_target()?
+            };
+            let url = source.unwrap_or(target.download_url());
             let dir = args.home.join("downloads");
             std::fs::create_dir_all(&dir).map_err(|e| {
                 Fail::new(format!("Couldn't create {}.", dir.display()), e.to_string())
             })?;
-            download(url, &dir.join("SideInstaller.ipa")).await
+            let filename = match target {
+                AppTarget::SideStore => "SideStore.ipa",
+                AppTarget::LiveContainer => "LiveContainer.ipa",
+            };
+            download(url, &dir.join(filename)).await?;
+            Ok((dir.join(filename), target))
         }
     }
 }
 
+/// Ask the user whether to install SideStore or SideStore+LiveContainer.
+fn ask_app_target() -> Result<AppTarget> {
+    let answer = ui::ask_menu(
+        "Which app would you like to install?",
+        &[
+            ("SideStore", "SideStore only"),
+            ("LiveContainer", "SideStore with LiveContainer"),
+        ],
+    ).ok_or_else(|| Fail::new(
+        "No app selected. Please run NexSideloader again.",
+        "user cancelled",
+    ))?;
+    match answer.as_str() {
+        "SideStore" => Ok(AppTarget::SideStore),
+        "LiveContainer" => Ok(AppTarget::LiveContainer),
+        _ => Err(Fail::new(
+            "Invalid choice. Please run NexSideloader again.",
+            format!("unexpected answer: {answer}"),
+        )),
+    }
+}
+
 async fn download(url: &str, dest: &Path) -> Result<PathBuf> {
-    ui::status("downloading SideInstaller");
+    ui::status("downloading");
     ui::detail(url);
     let client = reqwest::Client::builder()
-        .user_agent(format!("siboot/{VERSION}"))
+        .user_agent(format!("NexSideloader/{VERSION}"))
         .build()
         .map_err(|e| Fail::new("Couldn't start a download.", e.to_string()))?;
     let mut response = client.get(url).send().await.map_err(|e| {
         Fail::new(
-            "Couldn't download SideInstaller. Check the internet connection (LocalDevVPN only \
+            "Couldn't download. Check the internet connection (LocalDevVPN only \
              routes 10.7.0.1, so it isn't the cause).",
             crate::error_text::error_text(&e),
         )
@@ -62,7 +132,7 @@ async fn download(url: &str, dest: &Path) -> Result<PathBuf> {
     if !response.status().is_success() {
         return Err(Fail::new(
             format!(
-                "GitHub answered {} for the SideInstaller download. Try again in a minute.",
+                "GitHub answered {} for the download. Try again in a minute.",
                 response.status()
             ),
             url.to_string(),
@@ -80,7 +150,7 @@ async fn download(url: &str, dest: &Path) -> Result<PathBuf> {
     loop {
         let chunk = response.chunk().await.map_err(|e| {
             Fail::new(
-                "The SideInstaller download broke off. Run siboot again.",
+                "The download broke off. Run NexSideloader again.",
                 e.to_string(),
             )
         })?;
@@ -102,7 +172,7 @@ async fn download(url: &str, dest: &Path) -> Result<PathBuf> {
         .map_err(|e| Fail::new(format!("Couldn't write {}.", dest.display()), e.to_string()))?;
     check_ipa(dest)?;
     ui::ok(&format!(
-        "downloaded SideInstaller ({:.1} MB)",
+        "downloaded ({:.1} MB)",
         received as f64 / 1_048_576.0
     ));
     Ok(dest.to_path_buf())
@@ -130,7 +200,7 @@ fn check_ipa(path: &Path) -> Result<()> {
     }
 }
 
-pub async fn sign(session: &mut Session, ipa: &Path, device: &DeviceInfo) -> Result<Signed> {
+pub async fn sign(session: &mut Session, ipa: &Path, device: &DeviceInfo, target: AppTarget) -> Result<Signed> {
     ui::status("signing; this takes a while here");
     let (app_dir, _special) = session
         .sideloader
@@ -154,6 +224,7 @@ pub async fn sign(session: &mut Session, ipa: &Path, device: &DeviceInfo) -> Res
         bundle_id,
         name,
         version,
+        target,
     })
 }
 
@@ -224,23 +295,23 @@ mod tests {
     #[test]
     fn the_bundle_id_and_name_come_from_info_plist() {
         let dir = std::env::temp_dir().join(format!(
-            "siboot-app-{}/SideInstaller.app",
+            "siboot-app-{}/SideStore.app",
             std::process::id()
         ));
         std::fs::create_dir_all(&dir).unwrap();
         let mut info = plist::Dictionary::new();
         info.insert(
             "CFBundleIdentifier".into(),
-            "com.frizzlem.sideinstaller.ABCDE12345".into(),
+            "com.SideStore.SideStore.ABCDE12345".into(),
         );
-        info.insert("CFBundleName".into(), "SideInstaller".into());
+        info.insert("CFBundleName".into(), "SideStore".into());
         plist::to_file_xml(dir.join("Info.plist"), &info).unwrap();
         let (id, name, version) = bundle_info(&dir).unwrap();
-        assert_eq!(id, "com.frizzlem.sideinstaller.ABCDE12345");
-        assert_eq!(name, "SideInstaller");
+        assert_eq!(id, "com.SideStore.SideStore.ABCDE12345");
+        assert_eq!(name, "SideStore");
         assert_eq!(version, None);
-        info.insert("CFBundleShortVersionString".into(), "1.7.0".into());
+        info.insert("CFBundleShortVersionString".into(), "0.7.0".into());
         plist::to_file_xml(dir.join("Info.plist"), &info).unwrap();
-        assert_eq!(bundle_info(&dir).unwrap().2.as_deref(), Some("1.7.0"));
+        assert_eq!(bundle_info(&dir).unwrap().2.as_deref(), Some("0.7.0"));
     }
 }

@@ -39,7 +39,7 @@ async fn check_online(args: &Args) -> Result<()> {
     let apple_root = reqwest::Certificate::from_der(isideload::sideload::cert_identity::APPLE_ROOT)
         .map_err(|e| Fail::new("Couldn't load Apple's root certificate.", e.to_string()))?;
     let client = reqwest::Client::builder()
-        .user_agent(format!("siboot/{}", crate::VERSION))
+        .user_agent(format!("NexSideloader/{}", crate::VERSION))
         .timeout(Duration::from_secs(20))
         .add_root_certificate(apple_root)
         .build()
@@ -110,7 +110,7 @@ pub async fn probe(addr: SocketAddr) -> Result<Found> {
             ))
         }
     };
-    let mut client = RemotePairingClient::new(RpPairingSocket::new(stream), "siboot");
+    let mut client = RemotePairingClient::new(RpPairingSocket::new(stream), "NexSideloader");
     let reply = match timeout(Duration::from_secs(10), client.attempt_pair_verify()).await {
         Ok(Ok(reply)) => reply,
         Ok(Err(e)) => {

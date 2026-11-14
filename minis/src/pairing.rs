@@ -1,13 +1,13 @@
-//! Step 2: the pairing, made by siboot-pair in rootshell.
+//! Step 2: the pairing, made by siboot-pair in rootshell (for NexSideloader).
 //!
 //! From iOS 27 an iPhone pair-sets-up only with a host it dials itself: one
 //! advertising `_remotepairing-pairable-host._tcp`, which Settings › Privacy &
 //! Security › Developer Mode lists as "Pair with …". Minis's App Store build
-//! can't advertise that; rootshell (App Store) can, so its siboot-pair
+//! can't advertise that; rootshell (App Store) can, so its siboot-pair (for NexSideloader)
 //! (../rootshell) pairs and then offers the pairing file on this iPhone's own
 //! loopback, behind the 6-digit transfer code it shows.
 //!
-//! The file siboot saved on an earlier run comes first, while the iPhone
+//! The file NexSideloader saved on an earlier run comes first, while the iPhone
 //! accepts it: siboot-pair keeps its host identity, so pairing again there
 //! doesn't change it, and rootshell's offer is only needed the first time.
 //! Either way the iPhone has to accept the file before anything is signed.
@@ -24,9 +24,9 @@ use tokio::time::timeout;
 use crate::fail::{Fail, Result};
 use crate::{tunnel, ui, Args};
 
-/// Where siboot-pair offers the file (rootshell/src/main.rs, `HANDOFF_PORT`).
+/// Where siboot-pair offers the file (rootshell/src/main.rs, `HANDOFF_PORT`). siboot-pair is used by NexSideloader.
 const HANDOFF_PORT: u16 = 61207;
-/// Codes typed before siboot gives up. siboot-pair ends its offer after five.
+/// Codes typed before NexSideloader gives up. siboot-pair ends its offer after five.
 const CODE_TRIES: u32 = 3;
 /// Far larger than a pairing file, which is about 1 KB.
 const MAX_FILE: usize = 64 * 1024;
@@ -39,7 +39,7 @@ pub const ROOTSHELL_ROUTE: &str = "Pair in rootshell (App Store) first: turn on 
      Location Diary Mode › Session Only, then run in its local shell, one line at a time: \
      `curl -fsSLO https://raw.githubusercontent.com/FrizzleM/siboot/main/rootshell/bin/siboot-pair.wasm`, \
      `ifconfig en0 > ifconfig.txt`, `./siboot-pair.wasm`. Once it has paired, leave it running \
-     and run siboot here again: it asks for the transfer code rootshell shows.";
+     and run NexSideloader here again: it asks for the transfer code rootshell shows.";
 
 /// Where the pairing that works came from.
 pub enum Source {
@@ -59,7 +59,7 @@ pub async fn ensure(args: &Args, path: &Path) -> Result<Source> {
                 return Ok(Source::Saved);
             }
             Err(f) => {
-                ui::note("This iPhone doesn't accept the saved pairing file, so siboot takes the one from rootshell.");
+                ui::note("This iPhone doesn't accept the saved pairing file, so NexSideloader takes the one from rootshell.");
                 ui::detail(&f.raw);
                 saved_refused = Some(f);
             }
@@ -89,7 +89,7 @@ pub async fn ensure(args: &Args, path: &Path) -> Result<Source> {
     Ok(Source::Rootshell)
 }
 
-/// siboot-pair's answer to one code.
+/// siboot-pair's answer to one code (used by NexSideloader).
 enum Reply {
     File(Vec<u8>),
     WrongCode,
@@ -144,14 +144,14 @@ async fn take(
         };
         let code: String = typed.chars().filter(char::is_ascii_digit).collect();
         ui::activity("sending the code to rootshell");
-        // siboot-pair answers one request per connection.
+        // siboot-pair answers one request per connection (used by NexSideloader).
         if attempt > 1 {
             stream = match connect().await {
                 Ok(Ok(s)) => s,
                 _ => {
                     return Err(Fail::new(
                         "rootshell stopped offering the pairing file. Run `./siboot-pair.wasm` in \
-                         rootshell again, then siboot here.",
+                         rootshell again, then NexSideloader here.",
                         "",
                     ))
                 }
@@ -162,13 +162,13 @@ async fn take(
                 return Err(Fail::new(
                     "rootshell didn't answer: iOS has probably paused it. Check its Settings › \
                      Location Diary Mode is on Session Only, open rootshell for a moment, then \
-                     come back here and run siboot again.",
+                     come back here and run NexSideloader again.",
                     format!("no answer on {offer} within {} s", wait.as_secs()),
                 ))
             }
             Ok(Err(e)) => {
                 return Err(Fail::new(
-                    "The hand-over from rootshell broke off. Run siboot again.",
+                    "The hand-over from rootshell broke off. Run NexSideloader again.",
                     e.to_string(),
                 ))
             }
@@ -196,7 +196,7 @@ async fn take(
         return Ok(true);
     }
     Err(Fail::new(
-        "The transfer code didn't match. Run siboot again and type the code rootshell shows.",
+        "The transfer code didn't match. Run NexSideloader again and type the code rootshell shows.",
         "",
     ))
 }
@@ -225,17 +225,17 @@ mod tests {
     const QUICK: Duration = Duration::from_secs(5);
 
     fn temp_home(tag: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("siboot-test-{tag}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("nexsideloader-test-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
     }
 
     fn a_pairing_file() -> Vec<u8> {
-        RpPairingFile::generate("siboot test").to_bytes()
+        RpPairingFile::generate("NexSideloader test").to_bytes()
     }
 
-    /// siboot-pair's side of the hand-off (rootshell/src/main.rs, `offer`):
+    /// siboot-pair's side of the hand-off (rootshell/src/main.rs, `offer`) used by NexSideloader:
     /// one request per connection, `NO` for a wrong code.
     async fn rootshell_offering(code: &'static str, file: Vec<u8>) -> SocketAddr {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -306,7 +306,7 @@ mod tests {
         assert!(!path.exists());
     }
 
-    /// What siboot met on the iPhone with rootshell in the background: the
+    /// What NexSideloader met on the iPhone with rootshell in the background: the
     /// connection goes through, and then nothing answers.
     #[tokio::test]
     async fn a_rootshell_that_never_answers_is_given_up_on() {

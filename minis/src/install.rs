@@ -125,7 +125,7 @@ pub async fn install(connection: &mut Connection, app_dir: &Path) -> Result<Stri
     if !missing.is_empty() {
         return Err(Fail::new(
             format!(
-                "{} files didn't arrive whole on the iPhone. Run siboot again.",
+                "{} files didn't arrive whole on the iPhone. Run NexSideloader again.",
                 missing.len()
             ),
             missing.join(", "),
@@ -172,9 +172,9 @@ fn install_advice(raw: &str) -> String {
     if lower.contains("maximum number of installed apps")
         || lower.contains("maximum number of apps for free development profiles")
     {
-        "This iPhone already has 3 apps signed with a free Apple Account. Delete one, then run siboot again.".into()
+        "This iPhone already has 3 apps signed with a free Apple Account. Delete one, then run NexSideloader again.".into()
     } else if lower.contains("0xe8008015") || lower.contains("provisioning") {
-        "installd refused the provisioning profile. Run siboot again; if it keeps failing, the \
+        "installd refused the provisioning profile. Run NexSideloader again; if it keeps failing, the \
          profile may not include this iPhone."
             .into()
     } else {

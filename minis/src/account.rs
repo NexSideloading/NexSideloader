@@ -35,7 +35,7 @@ pub const SERVERS: &[&str] = &[
 ];
 
 /// The name the signing certificate is made for, as Xcode names a Mac's.
-const MACHINE_NAME: &str = "siboot";
+const MACHINE_NAME: &str = "NexSideloader";
 
 pub struct Session {
     pub sideloader: Sideloader,
@@ -199,13 +199,13 @@ fn stops_sign_in(error: &str) -> Option<&'static str> {
         .any(|c| error.contains(c))
     {
         return Some(
-            "Apple rejected the Apple Account or password. Check them and run siboot again. If \
+            "Apple rejected the Apple Account or password. Check them and run NexSideloader again. If \
              you're sure they're right, Apple may be limiting sign-ins: wait a while first.",
         );
     }
     if error.contains("429") || error.to_ascii_lowercase().contains("too many") {
         return Some(
-            "Apple is limiting sign-in attempts for now. Wait a while, then run siboot again.",
+            "Apple is limiting sign-in attempts for now. Wait a while, then run NexSideloader again.",
         );
     }
     if error.contains("No 2FA") {
@@ -215,7 +215,7 @@ fn stops_sign_in(error: &str) -> Option<&'static str> {
 }
 
 /// isideload keeps an account's signing key and saved sign-in in
-/// `<sha256(email)>/`. One made under the email as typed, before siboot
+/// `<sha256(email)>/`. One made under the email as typed, before NexSideloader
 /// lowercased it, is moved to the lowercase name, so the account keeps its key
 /// and certificate instead of making another.
 fn adopt_folder_typed_as(storage: &Path, typed: &str, apple_id: &str) {
@@ -463,7 +463,7 @@ fn choose_certificates_to_revoke(certs: &Vec<DevelopmentCertificate>) -> Option<
         }
         ui::warn(
             "This Apple Account already has as many signing certificates as Apple allows, so one \
-             must be revoked to make siboot's. Apps signed with a revoked certificate stop \
+             must be revoked to make NexSideloader's. Apps signed with a revoked certificate stop \
              opening, on every device, until they're signed again. This can't be undone.",
         );
         let mut labels: Vec<String> = certs
@@ -491,7 +491,7 @@ fn choose_certificates_to_revoke(certs: &Vec<DevelopmentCertificate>) -> Option<
 fn choose_certificates_plain(certs: &[DevelopmentCertificate]) -> Option<Vec<String>> {
     println!();
     ui::warn("This Apple Account already has as many signing certificates as Apple allows,");
-    ui::warn("so one must be revoked to make siboot's. Apps signed with a revoked certificate");
+    ui::warn("so one must be revoked to make NexSideloader's. Apps signed with a revoked certificate");
     ui::warn("stop opening, on every device, until they're signed again. This can't be undone.");
     for (i, cert) in certs.iter().enumerate() {
         ui::status(&format!(
@@ -571,7 +571,7 @@ mod tests {
 
     #[test]
     fn a_folder_made_under_a_capitalized_email_is_kept() {
-        let storage = std::env::temp_dir().join(format!("siboot-adopt-{}", std::process::id()));
+        let storage = std::env::temp_dir().join(format!("nexsideloader-adopt-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&storage);
         let typed = "Someone@Example.com";
         let apple_id = typed.to_lowercase();

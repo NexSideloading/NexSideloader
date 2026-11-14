@@ -59,7 +59,7 @@ const BOX_MAX: usize = 60;
 const INDENT: &str = "      ";
 /// Under the live area for as long as it's there, and after the version in
 /// plain output.
-const CREDIT: &str = "A project by Frizzle";
+const CREDIT: &str = "Original by FrizzleM, modified by NovaDev404";
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Mode {
@@ -851,6 +851,17 @@ pub fn choose(title: &str, options: &[String]) -> Option<usize> {
     };
     record_answer(title, picked.and_then(|i| options.get(i)).map(String::as_str));
     picked
+}
+
+/// Ask a menu question with labeled options. Returns the selected label.
+pub fn ask_menu(question: &str, options: &[(&str, &str)]) -> Option<String> {
+    let options_str: Vec<String> = options.iter().map(|(label, _)| label.to_string()).collect();
+    let descriptions: Vec<String> = options.iter().map(|(_, desc)| desc.to_string()).collect();
+    let display_options: Vec<String> = options.iter()
+        .map(|(label, desc)| format!("{} - {}", label, desc))
+        .collect();
+    let picked = choose(question, &display_options)?;
+    Some(options_str[picked].clone())
 }
 
 fn choose_prompt(title: &str, options: &[String]) -> Option<usize> {

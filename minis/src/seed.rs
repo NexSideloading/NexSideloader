@@ -1,13 +1,7 @@
-//! Step 7: hand the newly installed SideInstaller this pairing, as Side by Side
-//! hands one to SideInstaller on another iPhone
-//! (`SideBySideView.handOffToSideInstaller`): the file goes where SideInstaller
-//! keeps its own (`PrivateStore.pairingFile`), a merged file from an older
-//! pairing is deleted, and the file is marked as imported, so SideInstaller
-//! connects with it from its first launch instead of pairing itself.
-//!
-//! house_arrest vends the whole container because the app is signed for
-//! development; Application Support is outside Documents, and SideInstaller
-//! only moves a pairing file out of Documents when it has none of its own.
+//! Step 7: hand the newly installed SideStore this pairing.
+//! Splits the pairing file into three formats and writes them to SideStore's
+//! Documents folder: PairingFile_Lockdown.plist, PairingFile_RemoteRP.plist,
+//! and ALTPairingFile.mobiledevicepairing.
 
 use std::path::Path;
 
@@ -17,23 +11,26 @@ use idevice::house_arrest::HouseArrestClient;
 use idevice::RsdService;
 
 use crate::fail::{chain, Fail, Result};
+use crate::sidestore::split_pairing_file;
 use crate::tunnel::Connection;
 use crate::ui;
 
-pub const PAIRING_PATH: &str = "/Library/Application Support/rp_pairing_file.plist";
-const MERGED_PATH: &str = "/Library/Application Support/combined_pairing_file.plist";
-/// `Engine.importedPairingNameKey`.
-const IMPORTED_NAME_KEY: &str = "importedPairingFileName";
-/// The name SideInstaller shows the file under, as it shows "SideBySide.plist"
-/// for one Side by Side hands over.
-const HANDED_OVER_NAME: &str = "siboot.plist";
+/// SideStore's Documents folder.
+const DOCUMENTS_PATH: &str = "/Documents";
+/// Lockdown pairing file for SideStore.
+const LOCKDOWN_FILE: &str = "PairingFile_Lockdown.plist";
+/// RPPairing file for SideStore.
+const REMOTE_FILE: &str = "PairingFile_RemoteRP.plist";
+/// Legacy pairing file for SideStore.
+const LEGACY_FILE: &str = "ALTPairingFile.mobiledevicepairing";
 
 pub async fn hand_over(
     connection: &mut Connection,
     bundle_id: &str,
     pairing_path: &Path,
+    udid: &str,
 ) -> Result<()> {
-    ui::activity("opening SideInstaller's container");
+    ui::activity("opening SideStore's container");
     let pairing = std::fs::read(pairing_path).map_err(|e| {
         Fail::new(
             format!("Couldn't read {}.", pairing_path.display()),
@@ -47,63 +44,52 @@ pub async fn hand_over(
             .map_err(|e| Fail::new("Couldn't reach house_arrest on this iPhone.", chain(&e)))?;
     let mut afc = house_arrest.vend_container(bundle_id).await.map_err(|e| {
         Fail::new(
-            format!("Couldn't open {bundle_id}'s container. Import the pairing file in SideInstaller instead: it's at ~/.siboot/rp_pairing_file.plist in Minis."),
+            format!("Couldn't open {bundle_id}'s container. Import the pairing file in SideStore instead: it's at ~/.siboot/rp_pairing_file.plist in Minis (kept from original siboot)."),
             chain(&e),
         )
     })?;
 
-    for dir in ["/Library", "/Library/Application Support"] {
-        let _ = afc.mk_dir(dir).await;
+    // Ensure Documents folder exists
+    let _ = afc.mk_dir(DOCUMENTS_PATH).await;
+
+    ui::activity("splitting pairing file into SideStore's formats");
+    let files = split_pairing_file(&pairing, Some(udid))?;
+
+    let mut written_count = 0;
+
+    // Write Lockdown file if we have it
+    if let Some(lockdown_data) = files.lockdown {
+        let path = format!("{DOCUMENTS_PATH}/{LOCKDOWN_FILE}");
+        let written = write_verified(&mut afc, &path, &lockdown_data).await?;
+        ui::ok(&format!(
+            "PairingFile_Lockdown.plist written ({written} bytes)"
+        ));
+        written_count += 1;
     }
-    ui::activity("writing the pairing file into it");
-    let written = write_verified(&mut afc, PAIRING_PATH, &pairing).await?;
+
+    // Write RemoteRP file if we have it
+    if let Some(remote_data) = files.remote {
+        let path = format!("{DOCUMENTS_PATH}/{REMOTE_FILE}");
+        let written = write_verified(&mut afc, &path, &remote_data).await?;
+        ui::ok(&format!(
+            "PairingFile_RemoteRP.plist written ({written} bytes)"
+        ));
+        written_count += 1;
+    }
+
+    // Always write legacy file
+    let legacy_path = format!("{DOCUMENTS_PATH}/{LEGACY_FILE}");
+    let legacy_written = write_verified(&mut afc, &legacy_path, &files.legacy).await?;
     ui::ok(&format!(
-        "pairing file written into SideInstaller ({written} bytes, read back and checked)"
+        "ALTPairingFile.mobiledevicepairing written ({legacy_written} bytes)"
+    ));
+    written_count += 1;
+
+    ui::done(&format!(
+        "{} pairing file(s) written to SideStore's Documents folder",
+        written_count
     ));
 
-    // There's none on a fresh install; one from an older pairing would hand
-    // other apps that pairing.
-    let _ = afc.remove(MERGED_PATH).await;
-
-    let prefs_path = format!("/Library/Preferences/{bundle_id}.plist");
-    match mark_imported(&mut afc, &prefs_path).await {
-        Ok(()) => ui::detail(&format!(
-            "marked it as the imported file \"{HANDED_OVER_NAME}\" ({prefs_path})"
-        )),
-        Err(e) => {
-            ui::warn(
-                "Couldn't mark the pairing file as imported. SideInstaller still connects with it, \
-                 but may offer to pair again.",
-            );
-            ui::detail(&e.raw);
-        }
-    }
-    Ok(())
-}
-
-/// Set `importedPairingFileName` in SideInstaller's preferences, keeping what's
-/// there. Written beside the file and renamed over it, so a broken upload can't
-/// leave a half-written preferences file.
-async fn mark_imported(afc: &mut AfcClient, prefs_path: &str) -> Result<()> {
-    let mut prefs = match read_if_present(afc, prefs_path).await? {
-        Some(bytes) if !bytes.is_empty() => plist::from_bytes::<plist::Dictionary>(&bytes)
-            .map_err(|e| Fail::new("SideInstaller's preferences aren't a plist.", e.to_string()))?,
-        _ => plist::Dictionary::new(),
-    };
-    prefs.insert(IMPORTED_NAME_KEY.into(), HANDED_OVER_NAME.into());
-    let mut bytes = Vec::new();
-    plist::to_writer_binary(&mut bytes, &prefs).map_err(|e| {
-        Fail::new(
-            "Couldn't encode SideInstaller's preferences.",
-            e.to_string(),
-        )
-    })?;
-    let _ = afc.mk_dir("/Library/Preferences").await;
-    let staging = format!("{prefs_path}.siboot");
-    write_verified(afc, &staging, &bytes).await?;
-    afc.rename(staging, prefs_path)
-        .await
-        .map_err(|e| Fail::new("Couldn't save SideInstaller's preferences.", chain(&e)))?;
     Ok(())
 }
 

@@ -1,9 +1,11 @@
-# siboot for Open Minis
+# NexSideloader for Open Minis
 
-Installs SideInstaller onto the iPhone it runs on, signed with your own Apple
-Account, from the Linux shell of [Open Minis](https://apps.apple.com/app/id6759188481)
+Installs SideStore or SideStore+LiveContainer onto the iPhone it runs on, signed
+with your own Apple Account, from the Linux shell of [Open Minis](https://apps.apple.com/app/id6759188481)
 (free, App Store): no computer, no certificate. The pairing comes from
 siboot-pair in rootshell ([`../rootshell`](../rootshell)), which runs first.
+
+Original SideInstaller Bootstrap by FrizzleM, modified by NovaDev404.
 
 ## Running it
 
@@ -12,30 +14,31 @@ connected, and siboot-pair in rootshell paired and still running
 ([`../rootshell`](../rootshell#running-it)). Then, in Open Minis's terminal:
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/FrizzleM/siboot/main/minis/install.sh | sh
+wget -qO- https://raw.githubusercontent.com/FrizzleM/NexSideloader/main/minis/install.sh | sh
 ```
 
-siboot opens a page over the terminal, in Minis's own browser
+NexSideloader opens a page over the terminal, in Minis's own browser
 ([below](#the-page)), that shows each step and asks its questions. The first
-time, enter the transfer code rootshell shows; after that siboot uses the
-pairing file it saved and doesn't ask. Then your Apple Account email, password
-and verification code. Keep Minis open until siboot says it's done: iOS pauses
+time, enter the transfer code rootshell shows; after that NexSideloader uses the
+pairing file it saved and doesn't ask. Then choose whether to install SideStore
+or SideStore+LiveContainer, then your Apple Account email, password and
+verification code. Keep Minis open until NexSideloader says it's done: iOS pauses
 it in the background. The first time, trust your Apple Account in Settings ›
 General › VPN & Device Management. Free accounts' apps last 7 days;
-SideInstaller can renew itself from then on.
+SideStore can renew itself from then on.
 
 To answer in the terminal instead, add `-s -- --terminal` after `sh` (or run
-`siboot --terminal` once it's installed).
+`NexSideloader --terminal` once it's installed).
 
-[`install.sh`](install.sh) downloads [`bin/siboot-aarch64`](bin) from this
+[`install.sh`](install.sh) downloads [`bin/NexSideloader-aarch64`](bin) from this
 repository (a progress bar on one line while it does), checks it against the
-SHA-256 the script carries, keeps it at `~/.siboot/bin/siboot` (and
-`/usr/local/bin/siboot`), and runs it. After that, `siboot` on its own runs it
+SHA-256 the script carries, keeps it at `~/.NexSideloader/bin/NexSideloader` (and
+`/usr/local/bin/NexSideloader`), and runs it. After that, `NexSideloader` on its own runs it
 again without downloading.
 
 ## The screen
 
-With `--terminal`, siboot keeps a small live area under what it has printed:
+With `--terminal`, NexSideloader keeps a small live area under what it has printed:
 the steps of the run, the running one with a spinner, what it's doing and for
 how long, and a progress bar for the download, the upload and the install. A
 finished step stays as one line with what came of it, and a warning stays where
@@ -43,7 +46,7 @@ it happened, so scrolling back reads as a log of the run. It ends in a box: what
 to do next, or why it stopped.
 
 Under all of it, dim, is **A project by Frizzle**: from the first screen, under
-every step and question, and still the last line once siboot exits. On a screen
+every step and question, and still the last line once NexSideloader exits. On a screen
 too short for it and a blank line above it, it makes way for the run's own
 lines. Plain output has it after the version.
 
@@ -57,16 +60,16 @@ Esc steps back or stops; Ctrl-C stops.
 Every line is cut or wrapped to the terminal's width (an iPhone upright gives
 about 45 columns), and the live area kept shorter than the screen, so it redraws
 in place. With `--plain` or `--verbose`, `TERM=dumb`, `SIBOOT_PLAIN` set, or
-without a terminal on both ends, siboot prints plain lines instead, one per
+without a terminal on both ends, NexSideloader prints plain lines instead, one per
 event, as before. `cargo run --example screens` plays the screen through a
 made-up run, on a Mac and without an iPhone (`-- stop`, `-- developer-mode` and
 `-- --plain` for the others).
 
 ## The page
 
-In Open Minis siboot shows the run as a page in Minis's own browser, to tap
+In Open Minis NexSideloader shows the run as a page in Minis's own browser, to tap
 rather than type (since 0.17.0; `--terminal` keeps it in the terminal, and
-`--web` serves the page even where there's no Minis). siboot serves the page
+`--web` serves the page even where there's no Minis). NexSideloader serves the page
 itself, on this iPhone's loopback, and opens it with
 Minis's `minis-open`, which shows it in a sheet over the terminal. Minis stays
 in front, so iOS doesn't pause it. Safari wouldn't do: behind it, iOS pauses
@@ -84,9 +87,9 @@ twice, stops the run as Ctrl-C does.
 
 The terminal under the sheet keeps plain lines, as with `--plain`, and return
 there opens the page again after it's been swiped away. Where there's no
-`minis-open`, siboot prints the page's address instead. A page opened again
-draws the same screen: it gets every event since the start. siboot sends one
-every 5 s while it's quiet, so after 15 s with nothing the page says siboot
+`minis-open`, NexSideloader prints the page's address instead. A page opened again
+draws the same screen: it gets every event since the start. NexSideloader sends one
+every 5 s while it's quiet, so after 15 s with nothing the page says NexSideloader
 isn't answering (iOS has paused Minis) and to go back to Minis.
 
 How the page is kept to this iPhone, and to itself ([`src/web.rs`](src/web.rs)):
@@ -111,7 +114,7 @@ on a Mac, once a browser has it open (`-- --web --open` opens it).
 ## When it stops
 
 When a run stops on a problem (not when you stop it: Ctrl-C, nothing typed, a
-cancelled sign-in), siboot asks **Copy the log to the clipboard?** under the
+cancelled sign-in), NexSideloader asks **Copy the log to the clipboard?** under the
 box: `y` or return copies it, `n` doesn't. The log is what the screen showed,
 as plain lines with the time since the start, the answers to its questions
 (only that something was typed: never a password or a code), idevice's and
@@ -121,8 +124,8 @@ The Apple Account's email is cut to its first letter and domain, and long runs
 of hex digits (the UDID, anisette identities) to their ends.
 
 It's copied with Open Minis's own `apple-clipboard set`, which reads it on stdin
-(Minis's terminal ignores OSC 52), and saved to `~/.siboot/siboot.log` either
-way. Without a terminal on both ends siboot doesn't ask, and only says where the
+(Minis's terminal ignores OSC 52), and saved to `~/.NexSideloader/NexSideloader.log` either
+way. Without a terminal on both ends NexSideloader doesn't ask, and only says where the
 file is.
 
 ## The steps
@@ -130,31 +133,31 @@ file is.
 | # | Step | How |
 |---|---|---|
 | 1 | Check | GitHub and Apple's sign-in server answer; the iPhone answers RPPairing on `10.7.0.1:49152` through LocalDevVPN |
-| 2 | Pairing | the file saved in `~/.siboot` on an earlier run, while the iPhone accepts it; else the one siboot-pair offers on `127.0.0.1:61207`, for its transfer code (20 s for each answer), pair-verified with the iPhone |
+| 2 | Pairing | the file saved in `~/.NexSideloader` on an earlier run, while the iPhone accepts it; else the one siboot-pair offers on `127.0.0.1:61207`, for its transfer code (20 s for each answer), pair-verified with the iPhone |
 | 3 | Connect | pair-verify → `createListener` → TLS-PSK → CDTunnel → software TCP → RSD, as `tunnel_create_rppairing_multihost` does; lockdownd gives the UDID |
 | 4 | Apple ID | rust-core's `apple_session.rs`, compiled unchanged: saved token first, then GrandSlam + 2FA, Mac-ADI anisette servers in SideInstaller's Auto order |
-| 5 | Sign | the latest `SideInstaller.ipa` release, signed with isideload's `sign_app` (device registered, app group, no Increased Memory Limit), as Side by Side does |
+| 5 | Sign | choose SideStore or SideStore+LiveContainer, download the IPA, sign with isideload's `sign_app` (device registered, app group, no Increased Memory Limit), as Side by Side does |
 | 6 | Install | AFC upload to `/PublicStaging`, every file checked, `installation_proxy` with `PackageType: Developer` |
-| 7 | Hand over | house_arrest writes the pairing file to `Library/Application Support/rp_pairing_file.plist` and marks it imported (`importedPairingFileName`), as Side by Side hands one to SideInstaller |
+| 7 | Hand over | house_arrest writes the pairing files to the app's Documents folder: `PairingFile_Lockdown.plist`, `PairingFile_RemoteRP.plist`, and `ALTPairingFile.mobiledevicepairing` |
 
-`siboot check` runs step 1 only, and `siboot connect` steps 1–3.
-`siboot developer-mode` runs steps 1–3 and then asks for Developer Mode
+`NexSideloader check` runs step 1 only, and `NexSideloader connect` steps 1–3.
+`NexSideloader developer-mode` runs steps 1–3 and then asks for Developer Mode
 ([below](#developer-mode)).
 `SIBOOT_APPLE_ID` and `SIBOOT_PASSWORD` skip the prompts. Everything is kept in
-`~/.siboot`: the pairing file (mode 600), isideload's store (signing key,
+`~/.NexSideloader`: the pairing file (mode 600), isideload's store (signing key,
 anisette identity, saved token) and the download. The password is never
 written anywhere.
 
 ## Developer Mode
 
 ```sh
-siboot developer-mode
+NexSideloader developer-mode
 ```
 
-Before siboot is installed, the same is
-`wget -qO- https://raw.githubusercontent.com/FrizzleM/siboot/main/minis/install.sh | sh -s developer-mode`.
+Before NexSideloader is installed, the same is
+`wget -qO- https://raw.githubusercontent.com/FrizzleM/NexSideloader/main/minis/install.sh | sh -s developer-mode`.
 
-It works as SideInstaller's Settings › Developer Mode does. siboot opens the
+It works as SideStore's Settings › Developer Mode does. NexSideloader opens the
 install's tunnel (steps 1–3, without the internet checks), and lockdownd says
 whether Developer Mode is on (`DeveloperModeStatus` in
 `com.apple.security.mac.amfi`). When it's on, nothing is sent. When it's off,
@@ -162,9 +165,9 @@ AMFI's RSD shim (`com.apple.amfi.lockdown.shim.remote`) is asked to show the
 switch under Settings › Privacy & Security, where you turn it on: iOS restarts,
 and once you unlock it, asks you to tap Turn On.
 
-`siboot developer-mode --turn-on` turns it on instead, once you type `yes`: the
+`NexSideloader developer-mode --turn-on` turns it on instead, once you type `yes`: the
 iPhone restarts at once, and Minis stops with it. iOS does that only while the
-iPhone has no passcode. With one, it refuses, and siboot shows the switch
+iPhone has no passcode. With one, it refuses, and NexSideloader shows the switch
 instead.
 
 It needs what the install needs: a pairing the iPhone accepts, and a tunnel
@@ -175,14 +178,14 @@ tried.
 
 ## Building
 
-siboot compiles SideInstaller's vendored idevice, isideload and
+NexSideloader compiles SideInstaller's vendored idevice, isideload and
 apple-codesign-quick, and rust-core's `apple_session.rs` and `error_text.rs`,
 from the [`SideInstaller`](../SideInstaller) submodule, pinned to one commit, so
 check it out first: `git clone --recursive`, or `git submodule update --init` in
 a clone you already have.
 
 Any aarch64 Linux with a musl toolchain builds it; on a Mac, a Lima Alpine VM
-does (`limactl create --name=siboot template:alpine`, then
+does (`limactl create --name=NexSideloader template:alpine`, then
 `apk add build-base cmake perl clang linux-headers rustup`):
 
 ```sh
@@ -193,7 +196,7 @@ RUSTFLAGS="-C target-feature=+crt-static -C relocation-model=static" \
 A static non-PIE executable, like the `pair_host` Minis's own packages ship.
 `--target` must be explicit, or the static flags reach the proc macros too.
 
-To publish a new build, copy it to `bin/siboot-aarch64` and put its
+To publish a new build, copy it to `bin/NexSideloader-aarch64` and put its
 `sha256sum` in `install.sh`'s `SHA256`, and its size in bytes in `SIZE`, in the
 same commit: the script refuses a binary that doesn't match (`SIZE` only draws
 its progress bar).
@@ -221,7 +224,9 @@ tests, with a fake iPhone, are in
 
 ## What's been tested
 
-- **On an iPhone (iOS 27, November 2026):** this route end to end. siboot
+Modified to install SideStore instead of SideInstaller. Previously tested:
+
+- **On an iPhone (iOS 27, November 2026):** this route end to end. NexSideloader
   0.12.0 in Open Minis's App Store build took the pairing from siboot-pair 0.1.0
   in rootshell and installed SideInstaller.
 - **0.13.0** is 0.12.0 without what that route doesn't use: pairing inside
@@ -236,7 +241,7 @@ tests, with a fake iPhone, are in
   an iPhone. The hand-off itself (two apps on one iPhone's loopback) hasn't
   completed on an iPhone yet: the runs that worked there used a file moved over
   the LAN or saved by an earlier run.
-- **0.14.0** adds `siboot developer-mode`; the install is unchanged. Tested on
+- **0.14.0** adds `NexSideloader developer-mode`; the install is unchanged. Tested on
   macOS and Alpine aarch64 (39 tests, the new ones against stand-ins for
   lockdownd and AMFI; `install.sh | sh -s developer-mode` ran it). Not run on
   an iPhone yet. SideInstaller's own helper, which sends the same requests, has
@@ -254,14 +259,14 @@ tests, with a fake iPhone, are in
   are unchanged. Tested on macOS and Alpine aarch64 (57 tests), and through
   `examples/screens.rs -- stop` in a 46-column terminal, where the copy goes
   through `pbcopy`. Not run on an iPhone yet, so `apple-clipboard` hasn't been
-  called from siboot: its use follows Open Minis's source
+  called from NexSideloader: its use follows Open Minis's source
   (`src/ios/NativeOffloads/ClipboardOffload.m`).
 
 - **0.16.1** is 0.16.0 with the credit under the live area
   ([above](#the-screen)); the steps are unchanged. Tested on macOS and Alpine
   aarch64 (58 tests), through `examples/screens.rs` in a 46-column terminal (an
   install, a stop, `--plain`, and 10 and 8 rows, where it makes way), and with
-  the Alpine build's `siboot check` on a 46-column pty; `install.sh` installed
+  the Alpine build's `NexSideloader check` on a 46-column pty; `install.sh` installed
   it and skipped a current copy. Not run on an iPhone yet.
 
 - **0.16.2** signs in with the Apple Account email in lowercase. Apple Account
@@ -277,11 +282,11 @@ tests, with a fake iPhone, are in
   browser at an iPhone's size: an install with a mistyped transfer code, Other
   ways for Apple's code and a mistyped one; a stop at Connect and the question
   about the log; Developer Mode's question and the page's Stop; a page reloaded
-  mid-run; and the run paused with SIGSTOP, where the page said siboot wasn't
-  answering until it was resumed. `siboot --web check` on a Mac stopped at the
+  mid-run; and the run paused with SIGSTOP, where the page said NexSideloader wasn't
+  answering until it was resumed. `NexSideloader --web check` on a Mac stopped at the
   iPhone, as it does there, and asked about the log on the page. A test build
   with `--web` ran in Minis on an iPhone: the sheet opened and the page worked.
 
-Not tested yet: other iPhones and iOS versions, an Apple Account at its
-certificate or App ID limit (siboot then asks which certificate to revoke), and
+Not tested yet with SideStore: other iPhones and iOS versions, an Apple Account at its
+certificate or App ID limit (NexSideloader then asks which certificate to revoke), and
 a second run after the 7-day profile expires.
