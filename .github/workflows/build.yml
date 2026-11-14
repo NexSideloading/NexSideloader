@@ -20,6 +20,11 @@ jobs:
       with:
         toolchain: stable
         target: aarch64-unknown-linux-musl
+        # The action defaults rustflags to "-D warnings", which fails the
+        # build on warnings inside the vendored path dependencies
+        # (idevice, isideload, apple-codesign-quick). Empty string leaves
+        # RUSTFLAGS alone; minis/.cargo/config.toml carries the real flags.
+        rustflags: ""
     
 
     - name: Install aarch64-linux-musl cross-compilation tools
@@ -71,12 +76,22 @@ jobs:
         key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
     
     - name: Build NexSideloader
+      env:
+        # setup-rust-toolchain v2 defaults this to "deny", which fails on
+        # warnings in the vendored path dependencies. Keep it a warning.
+        CARGO_BUILD_WARNINGS: warn
       run: |
         cd minis
         RUSTFLAGS="-C target-feature=+crt-static -C relocation-model=static" \
           cargo build --release --target aarch64-unknown-linux-musl
     
     - name: Build siboot-pair.wasm
+      env:
+        # setup-rust-toolchain injects "-D warnings" via RUSTFLAGS (v1) or
+        # CARGO_BUILD_WARNINGS=deny (v2); the vendored idevice warns about an
+        # unused import when built without the `rsd` feature. Allow warnings.
+        RUSTFLAGS: ""
+        CARGO_BUILD_WARNINGS: warn
       run: |
         cd rootshell
         rustup target add wasm32-wasip1
