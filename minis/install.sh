@@ -14,7 +14,7 @@ BASE="${SIBOOT_BASE:-https://raw.githubusercontent.com/NexSideloading/NexSideloa
 # Of bin/NexSideloader-aarch64, updated with it: a download that doesn't match (an
 # error page, a cut-off transfer) is never run. SIZE only draws the progress
 # bar.
-SHA256=64e20f9f400cb822b8751be4ceba3c061e93171f20d026de347e1f3d5022d2a9
+SHA256=7c9763159be88a4951a65ac4318d026d91befc218135a062c2bc061d69a22863
 SIZE=11968496
 
 DIR="$HOME/.NexSideloader/bin"
