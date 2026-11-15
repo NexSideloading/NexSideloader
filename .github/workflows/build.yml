@@ -30,7 +30,12 @@ jobs:
         # (idevice, isideload, apple-codesign-quick). Empty string leaves
         # RUSTFLAGS alone; minis/.cargo/config.toml carries the real flags.
         rustflags: ""
-    
+
+    - name: Cache aarch64-linux-musl cross-compilation tools
+      uses: actions/cache@v4
+      with:
+        path: /opt/cross
+        key: ${{ runner.os }}-musl-cross-aarch64
 
     - name: Install aarch64-linux-musl cross-compilation tools
       run: |
@@ -47,39 +52,23 @@ jobs:
             texinfo \
             gawk
 
-          git clone --depth 1 https://github.com/richfelker/musl-cross-make.git
-          cd musl-cross-make
+          if [ ! -d "/opt/cross/bin" ]; then
+            git clone --depth 1 https://github.com/richfelker/musl-cross-make.git
+            cd musl-cross-make
 
-          cat > config.mak <<'EOF'
+            cat > config.mak <<'EOF'
           TARGET = aarch64-linux-musl
           OUTPUT = /opt/cross
           EOF
 
-          make -j"$(nproc)"
-          sudo make install
+            make -j"$(nproc)"
+            sudo make install
+          fi
 
           echo "/opt/cross/bin" >> "$GITHUB_PATH"
 
           rustup target add aarch64-unknown-linux-musl
-    
-    - name: Cache cargo registry
-      uses: actions/cache@v4
-      with:
-        path: ~/.cargo/registry
-        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-    
-    - name: Cache cargo index
-      uses: actions/cache@v4
-      with:
-        path: ~/.cargo/git
-        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-    
-    - name: Cache cargo build
-      uses: actions/cache@v4
-      with:
-        path: target
-        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-    
+
     - name: Build NexSideloader
       env:
         # setup-rust-toolchain v2 defaults this to "deny", which fails on
@@ -152,7 +141,7 @@ jobs:
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         git add minis/bin/NexSideloader-aarch64 minis/install.sh rootshell/bin/siboot-pair.wasm
-        git diff --staged --quiet || git commit -m "Build: Update NexSideloader binary, siboot-pair.wasm and install.sh" -m "NexSideloader SHA256: ${{ steps.hash.outputs.sha256 }}" -m "NexSideloader Size: ${{ steps.hash.outputs.size }} bytes" -m "siboot-pair.wasm SHA256: ${{ steps.wasm_hash.outputs.sha256 }}"
+        git diff --staged --quiet || git commit -m "Build: Update binaries"
     
     - name: Push changes
       uses: ad-m/github-push-action@master
