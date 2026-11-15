@@ -18,14 +18,14 @@
 -->
 <style>
 :root{
-  --page:#0b0c0f; --card:#141518; --raised:#1c1e22;
-  --control:rgba(255,255,255,.06); --control-hover:rgba(255,255,255,.1);
-  --hairline:rgba(255,255,255,.08); --hairline-strong:rgba(255,255,255,.16);
-  --off-white:#edeef0; --text:#f2f3f5; --text-2:#a4a8b0; --muted:#80858d;
-  --accent:#2f80ff; --positive:#4cc38a; --warning:#e5a140; --negative:#e5484d;
-  --r-control:12px; --r-card:20px;
-  --ease:cubic-bezier(.22,1,.36,1); --fast:.15s; --mid:.3s;
-  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  --page:#1a1d23; --card:#252830; --raised:#2f333d;
+  --control:rgba(255,255,255,.08); --control-hover:rgba(255,255,255,.12);
+  --hairline:rgba(255,255,255,.12); --hairline-strong:rgba(255,255,255,.18);
+  --off-white:#f0f1f3; --text:#f2f3f5; --text-2:#c4c8d0; --muted:#9095a0;
+  --accent:#4a90ff; --positive:#5dd89a; --warning:#f0b852; --negative:#ff5f65;
+  --r-control:12px; --r-card:18px;
+  --ease:cubic-bezier(.16,1,.3,1); --fast:.16s; --mid:.24s;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",Arial,sans-serif;
   --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;
 }
 *,*::before,*::after{box-sizing:border-box}
@@ -39,41 +39,42 @@ main{max-width:34rem; margin:0 auto; padding:max(20px,env(safe-area-inset-top)) 
 
 /* ---------- the head: name, what this run does, the one thing to keep in mind ---------- */
 
-.top{display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:32px}
-.brand{display:flex; align-items:center; gap:8px}
-.badge{padding:4px 10px; border-radius:999px; background:var(--off-white); color:var(--page); font-size:14px; font-weight:600; line-height:1}
+.top{display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:36px}
+.brand{display:flex; align-items:center; gap:10px}
+.badge{padding:5px 12px; border-radius:999px; background:var(--off-white); color:var(--page); font-size:14px; font-weight:700; line-height:1; letter-spacing:-.01em}
 .version{font:400 13px/1 var(--mono); color:var(--muted)}
-.stop{height:32px; padding:0 14px; border:1px solid var(--hairline); border-radius:16px; background:var(--control); color:var(--text-2); font-size:14px; cursor:pointer; -webkit-tap-highlight-color:transparent}
-.stop.armed{color:var(--negative); border-color:rgba(229,72,77,.45)}
-.tagline{margin-top:20px; font-size:26px; line-height:1.15; font-weight:600; letter-spacing:-.02em}
-.keep{display:flex; gap:8px; margin-top:10px; font-size:15px; color:var(--text-2)}
+.stop{height:34px; padding:0 16px; border:1px solid var(--hairline); border-radius:17px; background:var(--control); color:var(--text-2); font-size:14px; font-weight:500; cursor:pointer; -webkit-tap-highlight-color:transparent; transition:border-color var(--fast) var(--ease), background-color var(--fast) var(--ease), color var(--fast) var(--ease)}
+.stop:hover{border-color:var(--hairline-strong); background:var(--control-hover); color:var(--text)}
+.stop.armed{color:var(--negative); border-color:rgba(255,95,101,.4); background:rgba(255,95,101,.08)}
+.tagline{margin-top:24px; font-size:28px; line-height:1.15; font-weight:700; letter-spacing:-.03em; color:var(--text)}
+.keep{display:flex; gap:8px; margin-top:12px; font-size:15px; color:var(--text-2); line-height:1.4}
 .keep::before{content:"▲"; flex:none; font-size:11px; line-height:22px; color:var(--warning)}
-.banner{margin-top:16px; padding:12px 14px; border-radius:var(--r-control); background:var(--control); font-size:15px; color:var(--text-2)}
-.banner[data-tone=warn]{background:rgba(229,161,64,.08); box-shadow:inset 0 0 0 1px rgba(229,161,64,.35); color:var(--text)}
+.banner{margin-top:18px; padding:14px 16px; border-radius:var(--r-control); background:var(--control); font-size:15px; color:var(--text-2); line-height:1.4; border:1px solid var(--hairline)}
+.banner[data-tone=warn]{background:rgba(240,184,82,.1); border-color:rgba(240,184,82,.35); color:var(--text)}
 
 /* ---------- the steps ---------- */
 
-.steps{margin-top:24px; border-top:1px solid var(--hairline)}
-.step{padding:14px 0; border-bottom:1px solid var(--hairline)}
+.steps{margin-top:28px; border-top:1px solid var(--hairline)}
+.step{padding:16px 0; border-bottom:1px solid var(--hairline); transition:border-color var(--fast) var(--ease)}
 .row{display:flex; align-items:center; gap:12px}
-.mark{flex:none; display:grid; place-items:center; width:20px; height:20px; border-radius:50%; box-shadow:inset 0 0 0 1.5px var(--hairline-strong); color:var(--page); font-size:12px; font-weight:700; line-height:1}
-.step[data-state=active] .mark{box-shadow:none; border:2px solid rgba(47,128,255,.25); border-top-color:var(--accent); animation:spin .8s linear infinite}
+.mark{flex:none; display:grid; place-items:center; width:22px; height:22px; border-radius:50%; box-shadow:inset 0 0 0 1.5px var(--hairline-strong); color:var(--page); font-size:12px; font-weight:700; line-height:1}
+.step[data-state=active] .mark{box-shadow:none; border:2px solid rgba(74,144,255,.3); border-top-color:var(--accent); animation:spin .8s linear infinite}
 .step[data-state=done] .mark{box-shadow:none; background:var(--positive)}
 .step[data-state=failed] .mark{box-shadow:none; background:var(--negative)}
 @keyframes spin{to{transform:rotate(360deg)}}
-.name{flex:1; min-width:0; font-size:17px; font-weight:500}
+.name{flex:1; min-width:0; font-size:17px; font-weight:600; letter-spacing:-.01em}
 .step[data-state=pending] .name{color:var(--muted)}
 .time{font:400 13px/1 var(--mono); font-variant-numeric:tabular-nums; color:var(--muted)}
-.line{margin:4px 0 0 32px; font-size:15px; color:var(--text-2); overflow-wrap:anywhere}
+.line{margin:6px 0 0 34px; font-size:15px; color:var(--text-2); overflow-wrap:anywhere; line-height:1.4}
 .line:empty{display:none}
 .step[data-state=failed] .line{color:var(--negative)}
-.progress{margin:10px 0 0 32px}
-.track{height:4px; border-radius:2px; background:var(--control-hover); overflow:hidden}
+.progress{margin:12px 0 0 34px}
+.track{height:5px; border-radius:2.5px; background:var(--control-hover); overflow:hidden}
 .fill{width:0; height:100%; border-radius:inherit; background:var(--accent); transition:width var(--mid) var(--ease)}
-.progress-text{margin-top:6px; font:400 13px/1.4 var(--mono); font-variant-numeric:tabular-nums; color:var(--muted)}
-.items{margin:6px 0 0 32px}
+.progress-text{margin-top:8px; font:400 13px/1.4 var(--mono); font-variant-numeric:tabular-nums; color:var(--muted)}
+.items{margin:8px 0 0 34px}
 .items:empty{display:none}
-.item{display:flex; gap:8px; padding:3px 0; font-size:14px; color:var(--text-2); overflow-wrap:anywhere}
+.item{display:flex; gap:8px; padding:4px 0; font-size:14px; color:var(--text-2); overflow-wrap:anywhere; line-height:1.35}
 .item-mark{flex:none; width:14px; text-align:center}
 .item.ok .item-mark{color:var(--positive)}
 .item.warn .item-mark{color:var(--warning)}
@@ -84,39 +85,43 @@ main{max-width:34rem; margin:0 auto; padding:max(20px,env(safe-area-inset-top)) 
    stays where it happened. Show details brings back both. */
 body:not(.details) .item.detail,
 body:not(.details) .step[data-state=done] .item.ok{display:none}
-.after{margin-top:12px}
+.after{margin-top:14px}
 .after:empty{display:none}
 
 /* ---------- a question ---------- */
 
-.ask{margin:14px 0 4px; padding:18px; border:1px solid var(--hairline); border-radius:var(--r-card); background:var(--card); transition:opacity var(--fast) var(--ease)}
+.ask{margin:14px 0 4px; padding:20px; border:1px solid var(--hairline); border-radius:var(--r-card); background:var(--card); transition:opacity var(--fast) var(--ease), border-color var(--fast) var(--ease)}
 .ask[aria-busy=true]{opacity:.55; pointer-events:none}
-.ask-title{font-size:17px; font-weight:600; line-height:1.3}
-.field{display:block; margin-top:14px}
-.field-label{display:block; margin-bottom:6px; font-size:13px; color:var(--muted)}
-.input{width:100%; height:48px; padding:0 14px; border:1px solid var(--hairline-strong); border-radius:var(--r-control); background:var(--raised); font-size:17px; outline:none; -webkit-appearance:none; appearance:none}
-.input:focus{border-color:var(--accent)}
+.ask-title{font-size:18px; font-weight:600; line-height:1.35; letter-spacing:-.01em}
+.field{display:block; margin-top:16px}
+.field-label{display:block; margin-bottom:8px; font-size:14px; color:var(--muted); font-weight:500}
+.input{width:100%; height:50px; padding:0 16px; border:1px solid var(--hairline-strong); border-radius:var(--r-control); background:var(--raised); font-size:17px; outline:none; -webkit-appearance:none; appearance:none; transition:border-color var(--fast) var(--ease)}
+.input:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(74,144,255,.15)}
 .input::placeholder{color:var(--muted)}
-.code{position:relative; display:block; width:max-content; margin-top:16px}
-.boxes{display:flex; gap:6px}
-.box{display:grid; place-items:center; width:40px; height:52px; border-radius:var(--r-control); background:var(--raised); box-shadow:inset 0 0 0 1px var(--hairline-strong); font:500 24px/1 var(--mono)}
-.box:nth-child(4){margin-left:8px}
-.box.next{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.code{position:relative; display:block; width:max-content; margin-top:18px}
+.boxes{display:flex; gap:8px}
+.box{display:grid; place-items:center; width:44px; height:56px; border-radius:var(--r-control); background:var(--raised); box-shadow:inset 0 0 0 1px var(--hairline-strong); font:600 26px/1 var(--mono); transition:box-shadow var(--fast) var(--ease)}
+.box:nth-child(4){margin-left:10px}
+.box.next{box-shadow:inset 0 0 0 2px var(--accent); background:rgba(74,144,255,.08)}
 .code-input{position:absolute; inset:0; width:100%; height:100%; padding:0; border:0; background:transparent; color:transparent; caret-color:transparent; font-size:16px; outline:none; -webkit-appearance:none; appearance:none}
 .code-input::selection{background:transparent}
-.hints{margin-top:12px}
-.hint{padding:2px 0; font-size:14px; color:var(--text-2)}
+.hints{margin-top:14px}
+.hint{padding:3px 0; font-size:15px; color:var(--text-2); line-height:1.4}
 .hint.warn{color:var(--text)}
 .hint.warn::before{content:"▲  "; color:var(--warning)}
-.actions{display:flex; flex-wrap:wrap; gap:10px; margin-top:16px}
-.button{display:inline-flex; align-items:center; justify-content:center; height:44px; padding:0 20px; border:1px solid transparent; border-radius:22px; font-size:15px; font-weight:500; line-height:1; text-decoration:none; cursor:pointer; -webkit-tap-highlight-color:transparent; transition:transform var(--fast) var(--ease)}
-.button:active{transform:scale(.98)}
-.button:disabled{opacity:.5}
-.button.primary{background:var(--off-white); color:var(--page)}
-.button.secondary{border-color:var(--hairline); background:var(--control); color:var(--text)}
-.button.quiet{padding:0 12px; background:none; color:var(--text-2)}
-.choices{display:grid; gap:8px; margin-top:14px}
-.button.choice{justify-content:flex-start; width:100%; height:auto; min-height:48px; padding:12px 16px; border-color:var(--hairline); border-radius:var(--r-control); background:var(--raised); color:var(--text); line-height:1.3; text-align:left}
+.actions{display:flex; flex-wrap:wrap; gap:12px; margin-top:18px}
+.button{display:inline-flex; align-items:center; justify-content:center; height:46px; padding:0 22px; border:1px solid transparent; border-radius:23px; font-size:15px; font-weight:600; line-height:1; text-decoration:none; cursor:pointer; -webkit-tap-highlight-color:transparent; transition:transform var(--fast) var(--ease), background-color var(--fast) var(--ease), border-color var(--fast) var(--ease)}
+.button:active{transform:scale(.97)}
+.button:disabled{opacity:.5; cursor:not-allowed}
+.button.primary{background:var(--off-white); color:var(--page); font-weight:600}
+.button.primary:hover{background:#e8e9eb}
+.button.secondary{border-color:var(--hairline); background:var(--control); color:var(--text); font-weight:500}
+.button.secondary:hover{background:var(--control-hover)}
+.button.quiet{padding:0 14px; background:none; color:var(--text-2); font-weight:500}
+.button.quiet:hover{color:var(--text)}
+.choices{display:grid; gap:10px; margin-top:16px}
+.button.choice{justify-content:flex-start; width:100%; height:auto; min-height:50px; padding:14px 18px; border-color:var(--hairline); border-radius:var(--r-control); background:var(--raised); color:var(--text); line-height:1.35; text-align:left; font-weight:500; transition:border-color var(--fast) var(--ease), background-color var(--fast) var(--ease)}
+.button.choice:hover{border-color:var(--hairline-strong); background:var(--control-hover)}
 /* What to do elsewhere (pairing in Settings), numbered, before it starts. */
 .ready-steps{margin-top:12px; counter-reset:ready}
 .ready-step{display:flex; gap:10px; padding:5px 0; font-size:15px; line-height:1.4}
@@ -126,32 +131,32 @@ body:not(.details) .step[data-state=done] .item.ok{display:none}
 
 /* ---------- the pairing code, while Settings waits for it ---------- */
 
-.pin{margin:14px 0 4px; padding:18px; border:1px solid var(--hairline); border-radius:var(--r-card); background:var(--card); box-shadow:inset 0 0 0 1px rgba(47,128,255,.35)}
-.pin-title{font-size:17px; font-weight:600; line-height:1.3}
-.pin-digits{display:flex; gap:6px; margin-top:14px}
-.pin-digit{display:grid; place-items:center; width:42px; height:56px; border-radius:var(--r-control); background:var(--raised); box-shadow:inset 0 0 0 1px var(--hairline-strong); font:600 28px/1 var(--mono); font-variant-numeric:tabular-nums}
-.pin-digit:nth-child(4){margin-left:10px}
-.pin-note{margin-top:12px; font-size:15px; color:var(--text-2)}
+.pin{margin:16px 0 4px; padding:20px; border:1px solid var(--hairline); border-radius:var(--r-card); background:var(--card); box-shadow:inset 0 0 0 1px rgba(74,144,255,.3); transition:border-color var(--fast) var(--ease)}
+.pin-title{font-size:18px; font-weight:600; line-height:1.35; letter-spacing:-.01em}
+.pin-digits{display:flex; gap:8px; margin-top:16px}
+.pin-digit{display:grid; place-items:center; width:46px; height:60px; border-radius:var(--r-control); background:var(--raised); box-shadow:inset 0 0 0 1px var(--hairline-strong); font:700 30px/1 var(--mono); font-variant-numeric:tabular-nums; letter-spacing:.02em}
+.pin-digit:nth-child(4){margin-left:12px}
+.pin-note{margin-top:14px; font-size:15px; color:var(--text-2); line-height:1.4}
 
 /* ---------- how it ended ---------- */
 
-.outcome{margin-top:20px; padding:20px; border:1px solid var(--hairline); border-radius:var(--r-card); background:var(--card)}
-.outcome[data-tone=good]{box-shadow:inset 0 0 0 1px rgba(76,195,138,.3)}
-.outcome[data-tone=bad]{box-shadow:inset 0 0 0 1px rgba(229,72,77,.35)}
+.outcome{margin-top:24px; padding:22px; border:1px solid var(--hairline); border-radius:var(--r-card); background:var(--card); transition:border-color var(--fast) var(--ease)}
+.outcome[data-tone=good]{box-shadow:inset 0 0 0 1px rgba(93,216,154,.25)}
+.outcome[data-tone=bad]{box-shadow:inset 0 0 0 1px rgba(255,95,101,.3)}
 .outcome-head{display:flex; align-items:baseline; justify-content:space-between; gap:12px}
-.outcome-title{font-size:20px; font-weight:600; letter-spacing:-.01em}
+.outcome-title{font-size:22px; font-weight:600; letter-spacing:-.02em; line-height:1.2}
 .outcome[data-tone=good] .outcome-title{color:var(--positive)}
 .outcome[data-tone=bad] .outcome-title{color:var(--negative)}
 .outcome-took{flex:none; font:400 13px/1 var(--mono); color:var(--muted)}
-.outcome > p{margin-top:10px; font-size:15px; color:var(--text-2)}
-.outcome > .button{margin-top:18px}
-.cause{margin-top:12px; font-size:14px; color:var(--muted)}
-.cause summary{cursor:pointer}
-.cause p{margin-top:6px; font:400 13px/1.5 var(--mono); overflow-wrap:anywhere}
+.outcome > p{margin-top:12px; font-size:15px; color:var(--text-2); line-height:1.5}
+.outcome > .button{margin-top:20px}
+.cause{margin-top:14px; font-size:14px; color:var(--muted)}
+.cause summary{cursor:pointer; font-weight:500}
+.cause p{margin-top:8px; font:400 13px/1.5 var(--mono); overflow-wrap:anywhere}
 
-footer{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:32px; font-size:13px; color:var(--muted)}
-.details-toggle{display:flex; align-items:center; gap:8px; cursor:pointer}
-.details-toggle input{width:16px; height:16px; margin:0; accent-color:var(--accent)}
+footer{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:36px; padding-top:20px; border-top:1px solid var(--hairline); font-size:13px; color:var(--muted)}
+.details-toggle{display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:500}
+.details-toggle input{width:16px; height:16px; margin:0; accent-color:var(--accent); cursor:pointer}
 
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important; transition-duration:.01ms !important}
@@ -161,10 +166,10 @@ footer{display:flex; align-items:center; justify-content:space-between; gap:12px
 <body>
 <main>
   <header class="top">
-    <div class="brand"><span class="badge">NexSideloader</span><span class="version" id="version"></span></div>
+    <div class="brand"><img height="30px" width="30px" src="https://sideloading.net/logo.png"><span class="badge">NexSideloader</span><span class="version" id="version"></span></div>
     <button type="button" class="stop" id="stop" hidden>Stop</button>
   </header>
-  <h1 class="tagline" id="tagline">Connecting to siboot…</h1>
+  <h1 class="tagline" id="tagline">Connecting to NexSideloader...</h1>
   <p class="keep" id="keep" hidden></p>
   <p class="banner" id="banner" role="status" hidden></p>
   <ol class="steps" id="steps" aria-live="polite"></ol>
@@ -173,7 +178,7 @@ footer{display:flex; align-items:center; justify-content:space-between; gap:12px
   <form class="ask" id="ask" hidden novalidate></form>
   <footer>
     <label class="details-toggle"><input type="checkbox" id="details">Show details</label>
-    <span>A project by Frizzle</span>
+    <span>Original project by Frizzle, modified by NovaDev404</span>
   </footer>
 </main>
 <script>
@@ -404,7 +409,7 @@ footer{display:flex; align-items:center; justify-content:space-between; gap:12px
     pinEnd();
     stopEl.hidden = true;
     if (source) source.close();
-    banner("siboot is done. You can close this page.", "", "done");
+    banner("NexSideloader is done. You can close this page.", "", "done");
   }
 
   // ---------------------------------------------------------- questions
@@ -559,7 +564,7 @@ footer{display:flex; align-items:center; justify-content:space-between; gap:12px
     } catch (err) {
       if (asking && asking.id === id) {
         busy(false);
-        banner("Couldn't reach siboot. It runs in Minis's terminal: is Minis still open?", "warn", "unsent");
+        banner("Couldn't reach NexSideloader. It runs in Minis's terminal: is Minis still open?", "warn", "unsent");
       }
     }
   }
@@ -615,8 +620,8 @@ footer{display:flex; align-items:center; justify-content:space-between; gap:12px
     if (ended) return;
     if (Date.now() - lastHeard > 15000) {
       banner(heard
-        ? "siboot isn't answering. It runs in Minis's terminal, and iOS pauses Minis when you leave it: go back to Minis to carry on."
-        : "Can't reach siboot. Open this page from siboot in Minis's terminal.", "warn", "quiet");
+        ? "NexSideloader isn't answering. It runs in Minis's terminal, and iOS pauses Minis when you leave it: go back to Minis to carry on."
+        : "Can't reach NexSideloader. Open this page from NexSideloader in Minis's terminal.", "warn", "quiet");
     } else if (bannerWhy === "quiet") {
       banner("");
     }
