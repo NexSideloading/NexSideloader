@@ -8,6 +8,11 @@ itself, then hands the pairing file to NexSideloader in Open Minis
 
 Original SideInstaller Bootstrap by FrizzleM, modified by NovaDev404.
 
+Since Open Minis 1.16 (App Store, 2026-11-14), siboot 0.18.0 and later pair the
+iPhone in Minis themselves ([`../minis`](../minis#pairing-in-minis)), so
+siboot-pair is only needed with an older Minis. siboot still takes its file
+whenever it's offering one.
+
 ## Running it
 
 Needs iOS 27 or later, Developer Mode on, Wi-Fi, and rootshell allowed Local

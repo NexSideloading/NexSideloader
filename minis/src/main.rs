@@ -3,9 +3,11 @@
 //!
 //! Open Minis (App Store) runs Alpine Linux on an ARM64 build of iSH, so this is
 //! an ordinary static aarch64 Linux binary built on the same vendored idevice
-//! and isideload as SideInstaller. The pairing comes from rootshell, another
-//! App Store app: its siboot-pair (../rootshell) pairs this iPhone with itself
-//! and hands the file over on the iPhone's loopback (see README.md).
+//! and isideload as SideInstaller. It pairs this iPhone with itself too:
+//! Minis 1.16 advertises the pairing host for it (pairing.rs, bridge.rs).
+//! Where Minis can't, the pairing comes from rootshell, another App Store app,
+//! whose siboot-pair (../rootshell) hands the file over on the iPhone's
+//! loopback (see README.md).
 //!
 //! The steps:
 //! 1 check · 2 pairing · 3 connect · 4 Apple ID · 5 sign · 6 install · 7 hand over.
@@ -20,9 +22,13 @@
 //! keeps it in the terminal.
 
 mod account;
+mod bridge;
 mod devmode;
 mod fail;
+#[cfg(test)]
+mod fake_iphone;
 mod install;
+mod keepalive;
 mod pairing;
 mod preflight;
 mod report;
@@ -72,7 +78,7 @@ pub enum Command {
     All,
     /// Step 1 only.
     Check,
-    /// Steps 1-3: take the pairing and prove the tunnel works with it.
+    /// Steps 1-3: pair, or take the pairing, and prove the tunnel works with it.
     Connect,
     /// Steps 1-3, then show Developer Mode in Settings (or turn it on).
     DeveloperMode,
@@ -195,10 +201,9 @@ modified by NovaDev404.
 {usage}
   NexSideloader [command] [options]
 
-  Pair in rootshell first (siboot-pair), and
-  leave it running. With no command, every
-  step runs: check, take the pairing from
-  rootshell, connect, sign in, sign
+  With no command, every step runs: check,
+  pair this iPhone with siboot (in Settings,
+  the first time), connect, sign in, sign
   SideStore, install it, and hand it the
   pairing.
 
@@ -207,8 +212,8 @@ modified by NovaDev404.
       Only check that LocalDevVPN, this iPhone
       and the internet are ready.
   {connect}
-      Check, take the pairing, and only open the
-      tunnel with it.
+      Check, pair, and only open the tunnel
+      with the pairing.
   {devmode}
       Connect, and if Developer Mode is off, show
       its switch under Settings › Privacy &
@@ -259,8 +264,9 @@ modified by NovaDev404.
 
 {needs}
   iOS 27 or later, Developer Mode on, Wi-Fi,
-  LocalDevVPN (App Store) connected, and the
-  pairing from siboot-pair in rootshell.",
+  LocalDevVPN (App Store) connected, and
+  Open Minis 1.16 or later (for pairing in Minis),
+  or the pairing from siboot-pair in rootshell.",
         name = head("NexSideloader"),
         usage = head("USAGE"),
         commands = head("COMMANDS"),
@@ -487,12 +493,13 @@ async fn pipeline(args: &Args) -> Result<()> {
         return Ok(());
     }
 
-    ui::step(2, "Taking the pairing from rootshell");
+    ui::step(2, "Pairing this iPhone with siboot");
     let pairing_path = args.pairing_path();
     let source = pairing::ensure(args, &pairing_path).await.map_err(note)?;
     ui::done(match source {
-        pairing::Source::Saved => "the saved file still works",
+        pairing::Source::Saved => "the saved pairing still works",
         pairing::Source::Rootshell => "taken from rootshell",
+        pairing::Source::Minis => "paired here in Minis",
     });
 
     ui::step(3, "Connecting to this iPhone through LocalDevVPN");
