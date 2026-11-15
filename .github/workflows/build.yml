@@ -137,13 +137,13 @@ jobs:
         cd minis
         SHA256="${{ steps.hash.outputs.sha256 }}"
         SIZE="${{ steps.hash.outputs.size }}"
-        
+
         # Update SHA256 in install.sh
         sed -i "s/^SHA256=.*/SHA256=$SHA256/" install.sh
-        
+
         # Update SIZE in install.sh
         sed -i "s/^SIZE=.*/SIZE=$SIZE/" install.sh
-        
+
         echo "Updated install.sh:"
         grep -E "^SHA256=|^SIZE=" install.sh
     

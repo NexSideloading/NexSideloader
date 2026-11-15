@@ -1,26 +1,26 @@
 #!/bin/sh
-# Installs siboot into Open Minis and runs it, which pairs this iPhone with
-# itself (Open Minis 1.16 and later; siboot stops in an older one), signs
-# SideInstaller with your Apple Account and installs it.
+# Installs NexSideloader into Open Minis and runs it, which pairs this iPhone with
+# itself (Open Minis 1.16 and later; NexSideloader falls back to rootshell in an older one),
+# signs SideStore or SideStore+LiveContainer with your Apple Account and installs it.
 #
 # In Minis's terminal (Minis › Settings › Terminal):
 #
 #   wget -qO- https://raw.githubusercontent.com/NexSideloading/NexSideloader/main/minis/install.sh | sh
 #
-# Afterwards `siboot` runs it again, without downloading.
+# Afterwards `NexSideloader` runs it again, without downloading.
 set -eu
 
 BASE="${SIBOOT_BASE:-https://raw.githubusercontent.com/NexSideloading/NexSideloader/main/minis}"
-# Of bin/siboot-aarch64, updated with it: a download that doesn't match (an
+# Of bin/NexSideloader-aarch64, updated with it: a download that doesn't match (an
 # error page, a cut-off transfer) is never run. SIZE only draws the progress
 # bar.
 SHA256=06a89c33a73e7a663b434280106053b25d9324d686cab19c0d2b1b0d49b010f3
 SIZE=11519776
 
-DIR="$HOME/.siboot/bin"
-BIN="$DIR/siboot"
+DIR="$HOME/.NexSideloader/bin"
+BIN="$DIR/NexSideloader"
 
-# On a terminal, one line that redraws itself, as siboot's own screen does.
+# On a terminal, one line that redraws itself, as NexSideloader's own screen does.
 FANCY=
 if [ -t 1 ] && [ "${TERM:-}" != dumb ] && [ -z "${NO_COLOR:-}" ]; then
   FANCY=1
@@ -59,7 +59,7 @@ fail() {
 
 case "$(uname -m)" in
   aarch64 | arm64) ;;
-  *) fail "siboot runs in Open Minis on an iPhone (aarch64); this is $(uname -m)." ;;
+  *) fail "NexSideloader runs in Open Minis on an iPhone (aarch64); this is $(uname -m)." ;;
 esac
 
 fetch() {
@@ -99,7 +99,7 @@ frame() {
   percent=$((have * 100 / SIZE))
   [ "$percent" -gt 99 ] && percent=99
   size=" $(megabytes "$have")/$(megabytes "$SIZE") MB"
-  # "  ⠋ Downloading siboot " and " 42%", a column spare.
+  # "  ⠋ Downloading NexSideloader " and " 42%", a column spare.
   cells=$((COLS - 29))
   if [ "$cells" -ge $((12 + ${#size})) ]; then
     cells=$((cells - ${#size}))
@@ -109,7 +109,7 @@ frame() {
   [ "$cells" -gt 24 ] && cells=24
   [ "$cells" -lt 4 ] && cells=4
   full=$((percent * cells / 100))
-  printf '\r\033[2K  \033[36m%s\033[0m Downloading siboot \033[36m%s\033[0m\033[2m%s\033[0m %3d%%%s' \
+  printf '\r\033[2K  \033[36m%s\033[0m Downloading NexSideloader \033[36m%s\033[0m\033[2m%s\033[0m %3d%%%s' \
     "$spin" "$(repeat "$full" ━)" "$(repeat $((cells - full)) ─)" "$percent" "$size"
 }
 
@@ -118,11 +118,11 @@ frame() {
 download() {
   rm -f "$BIN.part"
   if [ -z "$FANCY" ]; then
-    echo "downloading siboot ($(megabytes "$SIZE") MB) …"
-    fetch "$BASE/bin/siboot-aarch64" "$BIN.part"
+    echo "downloading NexSideloader ($(megabytes "$SIZE") MB) …"
+    fetch "$BASE/bin/NexSideloader-aarch64" "$BIN.part"
     return
   fi
-  fetch "$BASE/bin/siboot-aarch64" "$BIN.part" < /dev/null 2> /dev/null &
+  fetch "$BASE/bin/NexSideloader-aarch64" "$BIN.part" < /dev/null 2> /dev/null &
   pid=$!
   i=0
   while kill -0 "$pid" 2> /dev/null; do
@@ -136,25 +136,25 @@ download() {
 
 mkdir -p "$DIR"
 if [ -f "$BIN" ] && [ "$(sha "$BIN")" = "$SHA256" ]; then
-  ok "siboot is up to date"
+  ok "NexSideloader is up to date"
 else
   if ! download; then
     rm -f "$BIN.part"
-    fail "Couldn't download siboot. Check the internet connection and try again."
+    fail "Couldn't download NexSideloader. Check the internet connection and try again."
   fi
   if [ "$(sha "$BIN.part")" != "$SHA256" ]; then
     rm -f "$BIN.part"
-    fail "The siboot download didn't match its checksum. Try again in a few minutes."
+    fail "The NexSideloader download didn't match its checksum. Try again in a few minutes."
   fi
   chmod 755 "$BIN.part"
   mv "$BIN.part" "$BIN"
-  ok "siboot downloaded and checked ($(megabytes "$SIZE") MB)"
+  ok "NexSideloader downloaded and checked ($(megabytes "$SIZE") MB)"
 fi
 
-# So `siboot` works on its own from now on (Minis's shell runs as root).
-ln -sf "$BIN" /usr/local/bin/siboot 2> /dev/null || true
+# So `NexSideloader` works on its own from now on (Minis's shell runs as root).
+ln -sf "$BIN" /usr/local/bin/NexSideloader 2> /dev/null || true
 
-# Piped into sh, stdin is this script, and siboot's prompts need the terminal.
+# Piped into sh, stdin is this script, and NexSideloader's prompts need the terminal.
 # The test opens it in a subshell: a redirection that fails on `:`, a special
 # built-in, would end this shell, where there's no terminal at all.
 if [ -t 0 ]; then
