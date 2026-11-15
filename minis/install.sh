@@ -1,10 +1,9 @@
 #!/bin/sh
-# Installs siboot into Open Minis and runs it, which takes the pairing from
-# siboot-pair in rootshell, signs SideInstaller with your Apple Account and
-# installs it.
+# Installs siboot into Open Minis and runs it, which pairs this iPhone with
+# itself (Open Minis 1.16 and later; siboot stops in an older one), signs
+# SideInstaller with your Apple Account and installs it.
 #
-# In Minis's terminal (Minis › Settings › Terminal), with siboot-pair still
-# running in rootshell:
+# In Minis's terminal (Minis › Settings › Terminal):
 #
 #   wget -qO- https://raw.githubusercontent.com/NexSideloading/NexSideloader/main/minis/install.sh | sh
 #
