@@ -2,11 +2,25 @@
 
 # NexSideloader
 
-**Install SideStore and LiveContainer directly on your iPhone. No PC required.**
+**Install SideStore and LiveContainer directly on your iPhone. No PC. No certs.**
 
 Original SideInstaller Bootstrap by FrizzleM, modified by NovaDev404.
 
+**Requirements:** iOS 27+ is required
+
 </div>
+
+---
+
+## Quick Start
+1. Install [Open Minis](https://apps.apple.com/app/id6759188481) and [LocalDevVPN](https://apps.apple.com/app/id6755608044) from the App Store.
+2. Go to Settings → Privacy & Security, scroll to the bottom and tap on Developer Mode, then enable it.
+3. Once Developer Mode is enabled, open LocalDevVPN and turn on the VPN.
+4. Open Open Minis, tap the console icon at the top right, then press Shell Terminal.
+5. Copy and paste this command into the terminal: `wget -qO- https://sideloading.net/sideloader.sh | sh`.
+7. Press Enter and follow the steps to install SideStore or SideStore + Livecontainer  .
+
+> Note: This method is for iOS 27 only!
 
 ---
 
@@ -16,32 +30,10 @@ NexSideloader is a modified version of siboot (SideInstaller Bootstrap) that ena
 
 - **[SideInstaller](./SideInstaller/)** - A SwiftUI app that handles the entire setup process on-device (upstream)
 - **[minis](./minis/)** - NexSideloader for Open Minis, installs SideStore from Open Minis terminal
-- **[rootshell](./rootshell/)** - siboot-pair for rootshell, pairs the iPhone with itself
-
-### Quick Start
-
-To use the original SideInstaller, follow the instructions at: https://sideinstaller.net/install.html
-
-**Requirements:** iOS 27+ is required
 
 ---
 
-## Components
-
-### SideInstaller
-
-The main SwiftUI application that provides a user-friendly interface for installing SideStore and LiveContainer. This is the upstream project by FrizzleM.
-
-**[Read the SideInstaller documentation →](./SideInstaller/README.md)**
-
-**Features:**
-- Install SideStore and LiveContainer directly on your iPhone
-- No PC required
-- Handles pairing, provisioning, and installation automatically
-- Open source and fully auditable
-- Your Apple credentials never leave your device
-
-### minis (NexSideloader for Open Minis)
+## Minis (NexSideloader for Open Minis)
 
 Installs SideStore or SideStore+LiveContainer onto the iPhone it runs on, signed with your own Apple Account, from the Linux shell of Open Minis (free, App Store). No computer or certificate required. Modified from siboot to install SideStore instead of SideInstaller.
 
@@ -55,34 +47,17 @@ Installs SideStore or SideStore+LiveContainer onto the iPhone it runs on, signed
 - Includes Developer Mode toggle
 - Splits pairing file into SideStore's three formats (Lockdown, RemoteRP, ALTPairingFile)
 
-### rootshell (siboot-pair)
-
-NexSideloader's pairing step as a WASM program for rootshell. It pairs the iPhone with itself, then hands the pairing file to NexSideloader in Open Minis.
-
-**[Read the rootshell documentation →](./rootshell/README.md)**
-
-**Features:**
-- Pairs iPhone with itself via mDNS
-- WASM program for rootshell
-- Provides pairing file to NexSideloader
-- Large code display and notifications
-- Copy log to clipboard support
-
 ---
 
-## How It Works Together
+## How It Works
 
-The three components work together to provide a complete PC-free installation experience:
-
-1. **rootshell** pairs your iPhone with itself using siboot-pair
-2. **minis** uses the pairing file to sign and install SideStore/LiveContainer
-3. **SideInstaller** provides the upstream all-in-one solution with a polished UI
+ **minis** pairs your device, and uses the pairing file to sign and install SideStore/LiveContainer without any other steps
 
 ---
 
 ## Requirements
 
-- iPhone or iPad on iOS 27+ (iOS 17.4+ with a pairing file made on a computer)
+- iPhone or iPad on iOS 27+
 - Wi-Fi (first time only)
 - Your Apple account credentials (not collected)
 - Developer Mode enabled
@@ -93,6 +68,7 @@ The three components work together to provide a complete PC-free installation ex
 
 This fork of siboot makes the following changes to install SideStore instead of SideInstaller:
 
+- SideInstaller not needed. Install SideStore direct from **Open Minis**
 - Added app selection (SideStore or SideStore+LiveContainer)
 - Updated download URLs to SideStore's nightly releases
 - Splits pairing file into SideStore's three formats:
@@ -114,8 +90,8 @@ All components are built with safety and privacy in mind:
 
 > [!CAUTION]
 > Only install from official sources. This project is open source, which means anyone can fork the code and insert malicious code. The only official builds are from:
-> - Website: https://sideinstaller.net/
-> - Repository: https://github.com/FrizzleM/SideInstaller
+> - Website: https://sideloading.net/sidestoreinstaller/
+> - Repository: https://github.com/NexSideloading/NexSideloader
 >
 > This is a modified fork by NovaDev404. Review the changes before using.
 
