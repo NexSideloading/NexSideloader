@@ -7,7 +7,6 @@
 //! cargo run --example screens -- stop          # one that stops at Connect
 //! cargo run --example screens -- old-minis     # in an Open Minis before 1.16
 //! cargo run --example screens -- teams         # an Apple Account on two teams
-//! cargo run --example screens -- developer-mode
 //! cargo run --example screens -- --plain       # the same, as plain lines
 //! cargo run --example screens -- --web         # the same, as the page
 //! ```
@@ -55,12 +54,11 @@ fn main() {
         }
         web::wait_for_page(Duration::from_secs(600));
     }
-    let devmode = has("developer-mode");
     let stop = has("stop");
     let code = if has("old-minis") {
         old_minis();
         1
-    } else if run(devmode, stop, has("rootshell"), has("teams")) {
+    } else if run(stop, has("rootshell"), has("teams")) {
         0
     } else {
         1
@@ -109,17 +107,12 @@ fn old_minis() {
     );
 }
 
-fn run(devmode: bool, stop: bool, rootshell: bool, teams: bool) -> bool {
+fn run(stop: bool, rootshell: bool, teams: bool) -> bool {
     let steps = [
         "Check", "Pairing", "Connect", "Apple ID", "Sign", "Install", "Handover",
     ];
-    if devmode {
-        ui::header("0.18.0", "Shows Developer Mode, or turns it on.");
-        ui::plan(&["Check", "Pairing", "Connect", "Dev Mode"], 4);
-    } else {
-        ui::header("0.18.0", "Installs SideStore or SideStore+LiveContainer on this iPhone.");
-        ui::plan(&steps, 7);
-    }
+    ui::header("0.18.0", "Installs SideStore or SideStore+LiveContainer on this iPhone.");
+    ui::plan(&steps, 7);
 
     ui::step(1, "Checking LocalDevVPN, this iPhone and the internet");
     for (what, took, answer) in [
@@ -176,37 +169,6 @@ fn run(devmode: bool, stop: bool, rootshell: bool, teams: bool) -> bool {
     }
     ui::ok("Frizzle's iPhone — iPhone18,1 on iOS 27.1");
     ui::done("Frizzle's iPhone · iOS 27.1");
-
-    if devmode {
-        ui::step(4, "Asking this iPhone for Developer Mode");
-        ui::activity("asking whether Developer Mode is on");
-        wait(700);
-        ui::status("Developer Mode is off");
-        ui::warn(
-            "Without a passcode, this iPhone restarts right away to turn Developer Mode on, and \
-             Minis stops with it. Once you unlock it, tap Turn On in the alert iOS shows.",
-        );
-        ui::note("With a passcode, iOS refuses, and siboot shows the switch in Settings instead.");
-        if !ui::confirm("turn it on now?", false) {
-            ui::failure(
-                "Nothing was sent, so Developer Mode stays off. `siboot developer-mode` without \
-                 --turn-on only shows it in Settings, and restarts nothing.",
-                "",
-            );
-            return false;
-        }
-        ui::activity("connecting to AMFI on the iPhone");
-        wait(800);
-        ui::done("set to turn on");
-        ui::finish(
-            "Developer Mode is turning on",
-            &[
-                "This iPhone restarts now, and Minis stops with it.",
-                "Once you unlock it, tap Turn On.",
-            ],
-        );
-        return true;
-    }
 
     ui::step(4, "Signing in to your Apple Account");
     let Some(email) = ui::ask_text(
@@ -377,8 +339,13 @@ fn pair_here() -> bool {
              notification too.",
             "Come back to Minis once Settings says it's paired.",
         ],
-        &["When you start, a player opens over Minis. It plays silence, which keeps Minis \
-           running while you're in Settings: leave it open. siboot closes it once you're back."],
+        &[
+            "If Developer Mode doesn't appear under Settings › Privacy & Security, install LL \
+             Pair Developer Mode from the App Store and follow its steps to turn Developer Mode \
+             on: https://apps.apple.com/nz/app/ll-pair-developer-mode/id6819981217",
+            "When you start, a player opens over Minis. It plays silence, which keeps Minis \
+             running while you're in Settings: leave it open. siboot closes it once you're back.",
+        ],
         "Start pairing",
     ) {
         ui::failure("Stopped before pairing.", "");

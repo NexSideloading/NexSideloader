@@ -25,7 +25,6 @@ path = "src/main.rs"
 #   afc                /PublicStaging upload
 #   installation_proxy the install
 #   house_arrest       writing the pairing file into the installed app's container
-#   amfi               `siboot developer-mode`
 # `aws-lc`, as rust-core: aarch64 musl is a supported aws-lc target.
 idevice = { path = "../SideInstaller/rust-core/vendor/idevice", default-features = false, features = [
   "aws-lc",
@@ -37,7 +36,6 @@ idevice = { path = "../SideInstaller/rust-core/vendor/idevice", default-features
   "afc",
   "installation_proxy",
   "house_arrest",
-  "amfi",
 ] }
 
 # Apple ID sign-in, developer portal and signing: SideInstaller's vendored copy,

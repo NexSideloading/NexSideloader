@@ -61,7 +61,6 @@ fn compose(args: &Args) -> String {
         Command::All => "install",
         Command::Check => "check",
         Command::Connect => "connect",
-        Command::DeveloperMode => "developer-mode",
     };
     let mut out = format!("NexSideloader {VERSION} log · {command}");
     let flags = flags_given(std::env::args().skip(1));
@@ -274,10 +273,10 @@ mod tests {
 
     #[test]
     fn options_are_kept_without_their_values() {
-        let given = ["developer-mode", "--turn-on", "--apple-id", "me@x.com", "--home=/tmp/x", "-v"];
+        let given = ["connect", "--verbose", "--apple-id", "me@x.com", "--home=/tmp/x", "-v"];
         assert_eq!(
             flags_given(given.iter().map(|s| s.to_string())),
-            ["--turn-on", "--apple-id", "--home", "-v"]
+            ["--verbose", "--apple-id", "--home", "-v"]
         );
     }
 

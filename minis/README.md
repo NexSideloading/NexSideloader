@@ -23,7 +23,10 @@ NexSideloader opens a page over the terminal, in Minis's own browser
 time, it pairs this iPhone with itself: the page says what to do, and when you
 tap **Start pairing**, open Settings › Privacy & Security › Developer Mode,
 scroll to the bottom, tap **Pair with siboot**, and enter your passcode, then
-the 6-digit code siboot shows (it also comes as a notification). A player opens
+the 6-digit code siboot shows (it also comes as a notification). If Developer
+Mode doesn't appear under Privacy & Security, install
+[LL Pair Developer Mode](https://apps.apple.com/nz/app/ll-pair-developer-mode/id6819981217)
+from the App Store and follow its steps to turn Developer Mode on. A player opens
 over Minis meanwhile: leave it open, it keeps Minis running while you're in
 Settings. Go back to Minis once Settings says it's paired. After that NexSideloader
 uses the pairing file it saved and doesn't ask. Then choose whether to install SideStore
@@ -79,8 +82,8 @@ about 45 columns), and the live area kept shorter than the screen, so it redraws
 in place. With `--plain` or `--verbose`, `TERM=dumb`, `SIBOOT_PLAIN` set, or
 without a terminal on both ends, NexSideloader prints plain lines instead, one per
 event, as before. `cargo run --example screens` plays the screen through a
-made-up run, on a Mac and without an iPhone (`-- stop`, `-- developer-mode`,
-`-- teams` and `-- --plain` for the others).
+made-up run, on a Mac and without an iPhone (`-- stop`, `-- teams` and
+`-- --plain` for the others).
 
 ## The page
 
@@ -161,8 +164,6 @@ file is.
 | 7 | Hand over | house_arrest writes the pairing files to the app's Documents folder: `PairingFile_Lockdown.plist`, `PairingFile_RemoteRP.plist`, and `ALTPairingFile.mobiledevicepairing` |
 
 `NexSideloader check` runs step 1 only, and `NexSideloader connect` steps 1–3.
-`NexSideloader developer-mode` runs steps 1–3 and then asks for Developer Mode
-([below](#developer-mode)).
 `SIBOOT_APPLE_ID` and `SIBOOT_PASSWORD` skip the prompts. Everything is kept in
 `~/.NexSideloader`: the pairing file (mode 600), isideload's store (signing key,
 anisette identity, saved token) and the download. The password is never
@@ -249,32 +250,12 @@ silence, so siboot says to leave it open, and closes it itself.
 
 ## Developer Mode
 
-```sh
-NexSideloader developer-mode
-```
-
-Before NexSideloader is installed, the same is
-`wget -qO- https://raw.githubusercontent.com/FrizzleM/NexSideloader/main/minis/install.sh | sh -s developer-mode`.
-
-It works as SideStore's Settings › Developer Mode does. NexSideloader opens the
-install's tunnel (steps 1–3, without the internet checks), and lockdownd says
-whether Developer Mode is on (`DeveloperModeStatus` in
-`com.apple.security.mac.amfi`). When it's on, nothing is sent. When it's off,
-AMFI's RSD shim (`com.apple.amfi.lockdown.shim.remote`) is asked to show the
-switch under Settings › Privacy & Security, where you turn it on: iOS restarts,
-and once you unlock it, asks you to tap Turn On.
-
-`NexSideloader developer-mode --turn-on` turns it on instead, once you type `yes`: the
-iPhone restarts at once, and Minis stops with it. iOS does that only while the
-iPhone has no passcode. With one, it refuses, and NexSideloader shows the switch
-instead.
-
-It needs what the install needs: a pairing the iPhone accepts (made first, the
-same way, if there isn't one), and a tunnel that opens. So it can't bring the
-switch back on an iPhone that has never been paired, since pairing happens under
-that same Developer Mode page. Whether
-iOS 27 still answers on its pairing port with Developer Mode off hasn't been
-tried.
+Pairing happens under Settings › Privacy & Security › Developer Mode, so it has
+to be on before the first run, and it has to appear there. On an iPhone where it
+doesn't, install
+[LL Pair Developer Mode](https://apps.apple.com/nz/app/ll-pair-developer-mode/id6819981217)
+from the App Store and follow its steps to turn Developer Mode on; the pairing
+steps say the same when they come up.
 
 ## Building
 
@@ -319,8 +300,7 @@ three, a connection dropped before the code, nobody tapping), the hand-off from 
 against a stand-in for siboot-pair's side (the right code, a mistyped one, three
 wrong ones, something that isn't a pairing file, nothing offered, no code
 typed), argument
-parsing, `developer-mode` against stand-ins for lockdownd and AMFI (on already,
-off, unreadable, a declined restart, the passcode refusal, a hang-up), the bundle walk, 2FA answers, server order, the sign-in errors that
+parsing, the bundle walk, 2FA answers, server order, the sign-in errors that
 stop it, which teams in a listTeams answer are free or paid and how the
 question lists them, install refusals, and rust-core's own `apple_session.rs` and
 `error_text.rs` tests. A test also stands in for a rootshell that iOS has
@@ -430,6 +410,13 @@ Modified to install SideStore instead of SideInstaller. Previously tested:
   ran `check` there. Not signed in to Apple with an account on two teams yet,
   so the free-or-paid rule is AltSign's, not yet seen against Apple's answer
   here.
+
+- **Unreleased** drops `NexSideloader developer-mode` (and `--turn-on`): the
+  AMFI requests it sent never worked. Developer Mode is turned on in Settings
+  as before, and when it doesn't appear under Privacy & Security the pairing
+  steps point to
+  [LL Pair Developer Mode](https://apps.apple.com/nz/app/ll-pair-developer-mode/id6819981217)
+  instead.
 
 Not tested yet with SideStore: other iPhones and iOS versions, an Apple Account on
 more than one team, one at its certificate or App ID limit (NexSideloader then

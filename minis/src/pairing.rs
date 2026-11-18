@@ -325,7 +325,11 @@ pub async fn run_host(
     // ready, and asked again after a refusal they can fix.
     let steps = ready_steps(&setup);
     let steps: Vec<&str> = steps.iter().map(String::as_str).collect();
-    let notes: &[&str] = if setup.keepalive_dir.is_some() { &[PLAYER_NOTE] } else { &[] };
+    let mut notes = vec![DEVMODE_NOTE];
+    if setup.keepalive_dir.is_some() {
+        notes.push(PLAYER_NOTE);
+    }
+    let notes = notes.as_slice();
     if setup.advertise {
         withdraw_leftovers(&setup.bridge).await;
     }
@@ -520,6 +524,11 @@ const READY_TITLE: &str = "Pair this iPhone with siboot";
 const PLAYER_NOTE: &str = "When you start, a player opens over Minis. It plays silence, which \
      keeps Minis running while you're in Settings: leave it open. siboot closes it once you're \
      back.";
+/// Where to turn Developer Mode on when it doesn't appear under Privacy &
+/// Security.
+const DEVMODE_NOTE: &str = "If Developer Mode doesn't appear under Settings › Privacy & \
+     Security, install LL Pair Developer Mode from the App Store and follow its steps to turn \
+     Developer Mode on: https://apps.apple.com/nz/app/ll-pair-developer-mode/id6819981217";
 
 /// What the user does in Settings, in order.
 fn ready_steps(setup: &HostSetup) -> Vec<String> {
