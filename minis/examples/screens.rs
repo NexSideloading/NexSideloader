@@ -358,11 +358,7 @@ fn run(devmode: bool, stop: bool, rootshell: bool, teams: bool) -> bool {
         &[
             "Open it from your Home Screen. The first time, iOS asks you to trust your Apple \
              Account: Settings › General › VPN & Device Management.",
-<<<<<<< HEAD
-            "Free accounts' apps last 7 days; SideStore can renew itself from then on.",
-=======
             team::lasts(kind, first),
->>>>>>> pr-2
         ],
     );
     true
