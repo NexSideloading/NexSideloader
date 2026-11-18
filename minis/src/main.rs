@@ -35,6 +35,7 @@ mod report;
 mod seed;
 mod sign;
 mod sidestore;
+mod team;
 mod tunnel;
 mod ui;
 mod web;
@@ -529,7 +530,7 @@ async fn pipeline(args: &Args) -> Result<()> {
 
     ui::step(4, "Signing in to your Apple Account");
     let mut session = account::sign_in(args).await?;
-    ui::done(&format!("team {}", session.team));
+    ui::done(&session.team);
 
     ui::step(5, "Signing for this iPhone");
     let (ipa, target) = sign::fetch_ipa(args).await?;
@@ -558,9 +559,9 @@ async fn pipeline(args: &Args) -> Result<()> {
     ui::finish(
         &format!("{} is installed", signed.name),
         &[
-            &format!("Open it from your Home Screen. The first time, iOS asks you to trust your Apple \
-             Account: Settings › General › VPN & Device Management."),
-            "Free accounts' apps last 7 days; the app can renew itself from then on.",
+            "Open it from your Home Screen. The first time, iOS asks you to trust your Apple \
+             Account: Settings › General › VPN & Device Management.",
+            team::lasts(session.kind, session.first),
             "The pairing files are in the app's Documents folder.",
         ],
     );
@@ -568,6 +569,123 @@ async fn pipeline(args: &Args) -> Result<()> {
 }
 
 /// Step 4 of `NexSideloader developer-mode`, through the open tunnel.
+async fn developer_mode(args: &Args, connection: &mut tunnel::Connection) -> Result<()> {
+    let request = if args.turn_on { devmode::Request::TurnOn } else { devmode::Request::Show };
+    let confirm = || ui::confirm("turn it on now?", false);
+    let outcome = devmode::run(connection, request, confirm).await?;
+    let unlock = "Once you unlock it, tap Turn On.";
+    match outcome {
+        devmode::Outcome::AlreadyOn => {
+            ui::done("already on");
+            ui::finish("Developer Mode is already on", &["So nothing was sent."]);
+        }
+        devmode::Outcome::Shown => {
+            ui::done("the switch now shows in Settings");
+            ui::finish(
+                "Developer Mode is in Settings",
+                &[
+                    "It now shows under Settings › Privacy & Security, near the bottom. Turn it \
+                     on there; iOS restarts to finish.",
+                    unlock,
+                ],
+            );
+        }
+        devmode::Outcome::ShownForPasscode => {
+            ui::done("the switch now shows in Settings");
+            ui::finish(
+                "Developer Mode is in Settings",
+                &[
+                    "iOS turns Developer Mode on from here only while the iPhone has no passcode, \
+                     so NexSideloader showed it under Settings › Privacy & Security instead. Turn it on \
+                     there; iOS restarts to finish.",
+                    unlock,
+                ],
+            );
+        }
+        devmode::Outcome::TurningOn => {
+            ui::done("set to turn on");
+            ui::finish(
+                "Developer Mode is turning on",
+                &["This iPhone restarts now, and Minis stops with it.", unlock],
+            );
+        }
+        devmode::Outcome::HungUp => {
+            ui::done("the iPhone hung up, restarting");
+            ui::finish(
+                "This iPhone is restarting",
+                &[
+                    "It hung up right after the request, as it does when it restarts to turn \
+                     Developer Mode on.",
+                    unlock,
+                    "If it doesn't restart, run NexSideloader developer-mode again.",
+                ],
+            );
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(line: &str) -> Args {
+        match parse_args(line.split_whitespace().map(String::from)).unwrap() {
+            Parsed::Run(args) => args,
+            _ => panic!("not a run"),
+        }
+    }
+
+    #[test]
+    fn defaults_run_everything_through_localdevvpn() {
+        let args = parse("");
+        assert_eq!(args.command, Command::All);
+        assert_eq!(args.device.to_string(), "10.7.0.1:49152");
+        assert!(args.pairing_path().ends_with(".NexSideloader/rp_pairing_file.plist"));
+    }
+
+    #[test]
+    fn commands_and_options_parse() {
+        let args = parse("connect --device-ip 192.168.1.20 --port 50000 -v");
+        assert_eq!(args.command, Command::Connect);
+        assert_eq!(args.device.to_string(), "192.168.1.20:50000");
+        assert!(args.verbose);
+        assert_eq!(parse("check").command, Command::Check);
+        assert!(parse("--plain").plain);
+        assert!(!parse("").plain);
+        assert_eq!(parse("--web").web, Some(true));
+        assert_eq!(parse("developer-mode --web").web, Some(true));
+        assert_eq!(parse("--terminal").web, Some(false));
+        assert_eq!(parse("--plain").web, None);
+        assert_eq!(parse("").web, None);
+    }
+
+    #[test]
+    fn developer_mode_parses_with_or_without_turn_on() {
+        let args = parse("developer-mode");
+        assert_eq!(args.command, Command::DeveloperMode);
+        assert!(!args.turn_on);
+        assert!(parse("developer-mode --turn-on").turn_on);
+        assert!(parse("--turn-on developer-mode -v").turn_on);
+    }
+
+    #[test]
+    fn bad_input_is_refused() {
+        for line in [
+            "--device-ip",
+            "--device-ip nope",
+            "pair",
+            "check connect",
+            "developer-mode check",
+            "--turn-on",
+            "connect --turn-on",
+            "--repair",
+            "--advertiser minis",
+        ] {
+            assert!(parse_args(line.split_whitespace().map(String::from)).is_err(), "{line}");
+        }
+    }
+}
 async fn developer_mode(args: &Args, connection: &mut tunnel::Connection) -> Result<()> {
     let request = if args.turn_on { devmode::Request::TurnOn } else { devmode::Request::Show };
     let confirm = || ui::confirm("turn it on now?", false);

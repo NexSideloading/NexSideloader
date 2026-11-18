@@ -1,6 +1,6 @@
 [package]
 name = "nexsideloader"
-version = "0.18.1"
+version = "0.19.0"
 edition = "2021"
 description = "PC-free bootstrap that installs SideStore or SideStore+LiveContainer onto the iPhone it runs on, from Open Minis's Linux shell, with the pairing made in rootshell. Original SideInstaller Bootstrap by FrizzleM, modified by NovaDev404."
 license = "MIT"
