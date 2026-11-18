@@ -2380,7 +2380,7 @@ mod tests {
             "✓ Done",
             "3:41",
             &[
-                "SideInstaller is installed.",
+                "SideStore is installed.",
                 "Free accounts' apps last 7 days.",
             ],
             46,

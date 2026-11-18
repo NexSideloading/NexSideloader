@@ -79,9 +79,11 @@ pub async fn check_minis(bridge: &Bridge) -> Result<()> {
     }
 }
 
-/// GitHub (the IPA) and Apple's sign-in server answer over TLS. Apple's
-/// `gsa.apple.com` chains to Apple Root CA, which Alpine's bundle lacks, so it's
-/// trusted here as isideload's GrandSlam client trusts it.
+/// GitHub and Apple's sign-in server answer over TLS. GitHub only proves the
+/// route to the releases; the chosen IPA is fetched later, so a missing asset
+/// is the download's to report. Apple's `gsa.apple.com` chains to Apple Root
+/// CA, which Alpine's bundle lacks, so it's trusted here as isideload's
+/// GrandSlam client trusts it.
 async fn check_online(args: &Args) -> Result<()> {
     let apple_root = reqwest::Certificate::from_der(isideload::sideload::cert_identity::APPLE_ROOT)
         .map_err(|e| Fail::new("Couldn't load Apple's root certificate.", e.to_string()))?;
@@ -92,25 +94,16 @@ async fn check_online(args: &Args) -> Result<()> {
         .build()
         .map_err(|e| Fail::new("Couldn't start an HTTPS client.", e.to_string()))?;
 
-    let downloads = args
-        .ipa
-        .as_deref()
-        .is_none_or(|ipa| ipa.starts_with("http"));
-    if downloads {
-        let url = args.ipa.as_deref().unwrap_or(crate::sign::SIDESTORE_IPA);
+    // The default IPAs come from GitHub. Check the host, not a release: the
+    // app is chosen later, and the download reports a missing asset itself.
+    if args.ipa.is_none() {
         ui::activity("reaching GitHub");
-        match client.head(url).send().await {
-            Ok(r) if r.status().is_success() => {
-                ui::ok("GitHub answers, and the SideInstaller release is there")
-            }
-            Ok(r) => ui::warn(&format!(
-                "GitHub answered {} for the SideInstaller release.",
-                r.status()
-            )),
+        match client.head("https://github.com").send().await {
+            Ok(r) if r.status().is_success() => ui::ok("GitHub answers"),
+            Ok(r) => ui::warn(&format!("GitHub answered {}.", r.status())),
             Err(e) => {
                 return Err(Fail::new(
-                    "Couldn't reach GitHub, where SideInstaller is downloaded from. Check the \
-                     internet connection.",
+                    "Couldn't reach GitHub. Check the internet connection.",
                     crate::error_text::error_text(&e),
                 ))
             }

@@ -29,6 +29,13 @@ pub enum AppTarget {
 }
 
 impl AppTarget {
+    pub fn name(self) -> &'static str {
+        match self {
+            AppTarget::SideStore => "SideStore",
+            AppTarget::LiveContainer => "LiveContainer",
+        }
+    }
+
     pub fn download_url(self) -> &'static str {
         match self {
             AppTarget::SideStore => SIDESTORE_IPA,
@@ -48,7 +55,7 @@ pub struct Signed {
     pub target: AppTarget,
 }
 
-/// `--ipa` as a path, or the URL it names, or SideStore's latest release.
+/// `--ipa` as a path, or the URL it names, or the chosen app's nightly release.
 /// If no IPA is specified, asks whether to install SideStore or SideStore+LiveContainer.
 pub async fn fetch_ipa(args: &Args) -> Result<(PathBuf, AppTarget)> {
     match args.ipa.as_deref() {
@@ -210,7 +217,7 @@ pub async fn sign(session: &mut Session, ipa: &Path, device: &DeviceInfo, target
             let text = crate::error_text::report_text(&e);
             Fail::new(sign_advice(&text), text)
         })?;
-    let (bundle_id, name, version) = bundle_info(&app_dir)?;
+    let (bundle_id, name, version) = bundle_info(&app_dir, target)?;
     ui::ok(&format!("signed {name} as {bundle_id}"));
     Ok(Signed {
         app_dir,
@@ -243,7 +250,10 @@ fn sign_advice(text: &str) -> String {
 }
 
 /// Bundle id, Home Screen name and version of the signed app.
-fn bundle_info(app_dir: &Path) -> Result<(String, String, Option<String>)> {
+fn bundle_info(
+    app_dir: &Path,
+    target: AppTarget,
+) -> Result<(String, String, Option<String>)> {
     let info: plist::Dictionary = plist::from_file(app_dir.join("Info.plist"))
         .map_err(|e| Fail::new("The signed app has no readable Info.plist.", e.to_string()))?;
     let text = |key: &str| {
@@ -260,7 +270,7 @@ fn bundle_info(app_dir: &Path) -> Result<(String, String, Option<String>)> {
     let name = text("CFBundleDisplayName")
         .filter(|n| !n.is_empty())
         .or_else(|| text("CFBundleName"))
-        .unwrap_or_else(|| "SideInstaller".into());
+        .unwrap_or_else(|| target.name().into());
     let version = text("CFBundleShortVersionString").filter(|v| !v.is_empty());
     Ok((bundle_id, name, version))
 }
@@ -299,12 +309,18 @@ mod tests {
         );
         info.insert("CFBundleName".into(), "SideStore".into());
         plist::to_file_xml(dir.join("Info.plist"), &info).unwrap();
-        let (id, name, version) = bundle_info(&dir).unwrap();
+        let (id, name, version) = bundle_info(&dir, AppTarget::SideStore).unwrap();
         assert_eq!(id, "com.SideStore.SideStore.ABCDE12345");
         assert_eq!(name, "SideStore");
         assert_eq!(version, None);
         info.insert("CFBundleShortVersionString".into(), "0.7.0".into());
         plist::to_file_xml(dir.join("Info.plist"), &info).unwrap();
-        assert_eq!(bundle_info(&dir).unwrap().2.as_deref(), Some("0.7.0"));
+        assert_eq!(
+            bundle_info(&dir, AppTarget::SideStore)
+                .unwrap()
+                .2
+                .as_deref(),
+            Some("0.7.0")
+        );
     }
 }

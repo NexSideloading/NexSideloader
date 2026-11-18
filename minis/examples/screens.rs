@@ -89,7 +89,7 @@ fn main() {
 /// The stop in an Open Minis older than 1.16 (preflight.rs), with no log to
 /// offer after it.
 fn old_minis() {
-    ui::header("0.18.1", "Installs SideInstaller on this iPhone.");
+    ui::header("0.18.1", "Installs SideStore or SideStore+LiveContainer on this iPhone.");
     ui::plan(
         &["Check", "Pairing", "Connect", "Apple ID", "Sign", "Install", "Handover"],
         7,
@@ -114,7 +114,7 @@ fn run(devmode: bool, stop: bool, rootshell: bool) -> bool {
         ui::header("0.18.0", "Shows Developer Mode, or turns it on.");
         ui::plan(&["Check", "Pairing", "Connect", "Dev Mode"], 4);
     } else {
-        ui::header("0.18.0", "Installs SideInstaller on this iPhone.");
+        ui::header("0.18.0", "Installs SideStore or SideStore+LiveContainer on this iPhone.");
         ui::plan(&steps, 7);
     }
 
@@ -123,7 +123,7 @@ fn run(devmode: bool, stop: bool, rootshell: bool) -> bool {
         (
             "reaching GitHub",
             700,
-            "GitHub answers, and the SideInstaller release is there",
+            "GitHub answers",
         ),
         (
             "reaching Apple's sign-in server",
@@ -287,19 +287,19 @@ fn run(devmode: bool, stop: bool, rootshell: bool) -> bool {
     ui::ok(&format!("signed in as {email} — team Frizzle (ABCDE12345)"));
     ui::done("team Frizzle (ABCDE12345)");
 
-    ui::step(5, "Signing SideInstaller for this iPhone");
-    ui::status("downloading SideInstaller");
+    ui::step(5, "Signing SideStore for this iPhone");
+    ui::status("downloading SideStore");
     let total: u64 = 24 * 1_048_576 + 400_000;
     for i in 0..=60u64 {
         ui::progress("downloaded", total * i / 60, total);
         wait(45);
     }
     ui::progress_end();
-    ui::ok("downloaded SideInstaller (24.4 MB)");
+    ui::ok("downloaded SideStore (24.4 MB)");
     ui::status("signing; this takes a while here");
     wait(4200);
-    ui::ok("signed SideInstaller as com.frizzlem.sideinstaller.ABCDE12345");
-    ui::done("SideInstaller 1.7.0 signed");
+    ui::ok("signed SideStore as com.SideStore.SideStore.ABCDE12345");
+    ui::done("SideStore signed");
 
     ui::step(6, "Installing it");
     let total: u64 = 51 * 1_048_576;
@@ -317,21 +317,21 @@ fn run(devmode: bool, stop: bool, rootshell: bool) -> bool {
         wait(70);
     }
     ui::progress_end();
-    ui::ok("SideInstaller installed (com.frizzlem.sideinstaller.ABCDE12345)");
+    ui::ok("SideStore installed (com.SideStore.SideStore.ABCDE12345)");
     ui::done("installed · 51.0 MB, 412 files");
 
-    ui::step(7, "Handing SideInstaller the pairing");
+    ui::step(7, "Handing SideStore the pairing");
     ui::activity("writing the pairing file into it");
     wait(900);
-    ui::done("SideInstaller has the pairing");
+    ui::done("SideStore has the pairing");
 
-    ui::link("Open SideInstaller", "sideinstaller://");
+    ui::link("Open SideStore", "sidestore://");
     ui::finish(
-        "SideInstaller is installed",
+        "SideStore is installed",
         &[
             "Open it from your Home Screen. The first time, iOS asks you to trust your Apple \
              Account: Settings › General › VPN & Device Management.",
-            "Free accounts' apps last 7 days; SideInstaller can renew itself from then on.",
+            "Free accounts' apps last 7 days; SideStore can renew itself from then on.",
         ],
     );
     true

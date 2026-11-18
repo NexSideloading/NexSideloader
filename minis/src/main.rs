@@ -230,8 +230,9 @@ modified by NovaDev404.
       password comes from SIBOOT_PASSWORD or a
       prompt that shows only dots.
   {ipa}
-      Install this IPA instead of SideStore's
-      latest release.
+      Install this IPA instead of the latest
+      SideStore or SideStore+LiveContainer
+      release.
   {anisette}
       Sign in through this anisette server only.
   {turn_on}
@@ -333,7 +334,7 @@ fn main() -> ExitCode {
         if args.command == Command::DeveloperMode {
             "Shows Developer Mode, or turns it on."
         } else {
-            "Installs SideStore on this iPhone."
+            "Installs SideStore or SideStore+LiveContainer on this iPhone."
         },
     );
     if let Some(url) = &page {
@@ -489,7 +490,10 @@ async fn pipeline(args: &Args) -> Result<()> {
     let online = preflight::run(args).await.map_err(note)?;
     ui::done(if online { "online, and the iPhone answers" } else { "the iPhone answers" });
     if args.command == Command::Check {
-        ui::finish("Ready", &["Run NexSideloader to install SideStore."]);
+        ui::finish(
+            "Ready",
+            &["Run NexSideloader to install SideStore or SideStore+LiveContainer."],
+        );
         return Ok(());
     }
 
@@ -541,11 +545,11 @@ async fn pipeline(args: &Args) -> Result<()> {
     ui::ok(&format!("{} installed ({})", signed.name, signed.bundle_id));
     ui::done(&format!("installed · {uploaded}"));
 
-    ui::step(7, "Handing SideStore the pairing");
+    ui::step(7, &format!("Handing {} the pairing", signed.name));
     seed::hand_over(&mut connection, &signed.bundle_id, &pairing_path, &device.udid).await?;
-    ui::done("SideStore has the pairing");
+    ui::done(&format!("{} has the pairing", signed.name));
 
-    // SideStore's URL scheme
+    // The installed app's URL scheme
     let url_scheme = match signed.target {
         sign::AppTarget::SideStore => "sidestore://",
         sign::AppTarget::LiveContainer => "livecontainer://",

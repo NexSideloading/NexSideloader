@@ -1,5 +1,5 @@
-//! Step 7: hand the newly installed SideStore this pairing.
-//! Splits the pairing file into three formats and writes them to SideStore's
+//! Step 7: hand the newly installed app this pairing.
+//! Splits the pairing file into three formats and writes them to the app's
 //! Documents folder: PairingFile_Lockdown.plist, PairingFile_RemoteRP.plist,
 //! and ALTPairingFile.mobiledevicepairing.
 
@@ -15,13 +15,13 @@ use crate::sidestore::split_pairing_file;
 use crate::tunnel::Connection;
 use crate::ui;
 
-/// SideStore's Documents folder.
+/// The installed app's Documents folder.
 const DOCUMENTS_PATH: &str = "/Documents";
-/// Lockdown pairing file for SideStore.
+/// Lockdown pairing file.
 const LOCKDOWN_FILE: &str = "PairingFile_Lockdown.plist";
-/// RPPairing file for SideStore.
+/// RPPairing file.
 const REMOTE_FILE: &str = "PairingFile_RemoteRP.plist";
-/// Legacy pairing file for SideStore.
+/// Legacy pairing file.
 const LEGACY_FILE: &str = "ALTPairingFile.mobiledevicepairing";
 
 pub async fn hand_over(
@@ -30,7 +30,7 @@ pub async fn hand_over(
     pairing_path: &Path,
     udid: &str,
 ) -> Result<()> {
-    ui::activity("opening SideStore's container");
+    ui::activity("opening the app's container");
     let pairing = std::fs::read(pairing_path).map_err(|e| {
         Fail::new(
             format!("Couldn't read {}.", pairing_path.display()),
@@ -44,7 +44,7 @@ pub async fn hand_over(
             .map_err(|e| Fail::new("Couldn't reach house_arrest on this iPhone.", chain(&e)))?;
     let mut afc = house_arrest.vend_container(bundle_id).await.map_err(|e| {
         Fail::new(
-            format!("Couldn't open {bundle_id}'s container. Import the pairing file in SideStore instead: it's at ~/.siboot/rp_pairing_file.plist in Minis (kept from original siboot)."),
+            format!("Couldn't open {bundle_id}'s container. Import the pairing file in the app instead: it's at ~/.siboot/rp_pairing_file.plist in Minis (kept from original siboot)."),
             chain(&e),
         )
     })?;
@@ -52,7 +52,7 @@ pub async fn hand_over(
     // Ensure Documents folder exists
     let _ = afc.mk_dir(DOCUMENTS_PATH).await;
 
-    ui::activity("splitting pairing file into SideStore's formats");
+    ui::activity("splitting the pairing file into the app's formats");
     let files = split_pairing_file(&pairing, Some(udid))?;
 
     let mut written_count = 0;
@@ -86,7 +86,7 @@ pub async fn hand_over(
     written_count += 1;
 
     ui::done(&format!(
-        "{} pairing file(s) written to SideStore's Documents folder",
+        "{} pairing file(s) written to the app's Documents folder",
         written_count
     ));
 

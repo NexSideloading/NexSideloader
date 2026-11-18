@@ -92,7 +92,7 @@ Minis within seconds, and a paused app takes the connection and never answers.
 The page shows what the live screen shows: the steps, the running one with what
 it's doing, for how long and a progress bar, what worked (folded away once its
 step is done), the warnings where they happened, and the box the run ends in,
-which has a button that opens SideInstaller once it's installed. Show details
+which has a button that opens the installed app once it's installed. Show details
 adds what `--verbose` adds. The questions are fields and buttons: the email
 with the email keyboard, the password as dots, the codes in boxes that send
 themselves at the sixth digit (marked as one-time codes, which iOS can offer to
