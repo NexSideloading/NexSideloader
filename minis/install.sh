@@ -27,8 +27,8 @@ SOURCES="${SIBOOT_BASE:-$SOURCES}"
 # Of bin/NexSideloader-aarch64, updated with it: a download that doesn't match
 # (an error page, a cut-off transfer, a stale mirror) is never run. SIZE only
 # draws the progress bar.
-SHA256="61b08ed847a8fcfb120235015e723f1a62098cbf6f18da6507480bd2f0c4b72e"
-SIZE=12013040
+SHA256=cac272268051ccfccbe6a2629da1ae9d7b2f1974e0b381ec11f9b704b867f642
+SIZE=12141768
 
 DIR="$HOME/.NexSideloader/bin"
 BIN="$DIR/NexSideloader"
