@@ -14,7 +14,10 @@
 //!
 //! The Apple ID password goes only to Apple (as an SRP proof, via isideload) and
 //! is never written to disk or logged. The developer token and signing key are
-//! kept, in ~/.NexSideloader/isideload, so a second run needn't sign in again.
+//! kept in ~/.siboot/isideload, so a second run needn't sign in again. The
+//! Apple Accounts that signed in are kept too, by email, in
+//! ~/.siboot/apple-accounts (saved.rs): a later run offers them, and asks for
+//! the password only once Apple wants it again.
 //!
 //! In Open Minis the run shows as a page in Minis's browser, served on this
 //! iPhone's loopback, and asks its questions there (web.rs); `--terminal`
@@ -22,6 +25,7 @@
 
 mod account;
 mod bridge;
+mod download;
 mod fail;
 #[cfg(test)]
 mod fake_iphone;
@@ -30,6 +34,7 @@ mod keepalive;
 mod pairing;
 mod preflight;
 mod report;
+mod saved;
 mod seed;
 mod sign;
 mod sidestore;
@@ -65,7 +70,8 @@ const STEP_NAMES: [&str; STAGES] = ["Check", "Pairing", "Connect", "Apple ID", "
 /// LocalDevVPN's address for this iPhone: traffic to it comes back to the
 /// device's own services.
 const DEFAULT_DEVICE_IP: Ipv4Addr = Ipv4Addr::new(10, 7, 0, 1);
-/// The device's RPPairing listener (remoted), as SideInstaller dials it.
+/// The device's RPPairing listener (remoted), as SideInstaller dials it. It's
+/// nearly always there, and step 1 looks for it when it isn't (preflight.rs).
 const DEFAULT_RP_PORT: u16 = 49152;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -78,6 +84,7 @@ pub enum Command {
     Connect,
 }
 
+#[derive(Clone)]
 pub struct Args {
     pub command: Command,
     pub verbose: bool,
@@ -201,9 +208,11 @@ modified by NovaDev404.
 {options}
   {apple_id}
       Apple Account to sign with (else
-      SIBOOT_APPLE_ID, else it asks). The
-      password comes from SIBOOT_PASSWORD or a
-      prompt that shows only dots.
+      SIBOOT_APPLE_ID, else it offers the
+      saved ones, or asks). The password
+      comes from SIBOOT_PASSWORD or a prompt
+      that shows only dots, and only when
+      Apple wants it.
   {ipa}
       Install this IPA instead of the latest
       SideStore or SideStore+LiveContainer
@@ -215,6 +224,8 @@ modified by NovaDev404.
       (default {ip}).
   {port}
       The iPhone's RPPairing port (default {rp}).
+      When nothing answers there, NexSideloader looks
+      on the iPhone's other ports.
   {pairing_file}
       Default ~/.NexSideloader/rp_pairing_file.plist.
   {home}
@@ -440,8 +451,12 @@ async fn pipeline(args: &Args) -> Result<()> {
     }
 
     ui::step(1, "Checking LocalDevVPN, this iPhone and the internet");
-    let online = preflight::run(args).await?;
-    ui::done(if online { "online, and the iPhone answers" } else { "the iPhone answers" });
+    let checked = preflight::run(args).await?;
+    ui::done(&match &checked.ipa {
+        Some(ipa) if args.command == Command::All => format!("{} · the iPhone answers", ipa.name()),
+        _ if checked.online => "online, and the iPhone answers".into(),
+        _ => "the iPhone answers".into(),
+    });
     if args.command == Command::Check {
         ui::finish(
             "Ready",
@@ -449,6 +464,14 @@ async fn pipeline(args: &Args) -> Result<()> {
         );
         return Ok(());
     }
+    // The rest dials where the iPhone answered, which isn't the port asked
+    // for when its pairing service started on another one.
+    let args = &Args {
+        device: checked.device,
+        ..args.clone()
+    };
+    // Got in step 1, before LocalDevVPN had to be the VPN that's on.
+    let ipa = checked.ipa;
 
     ui::step(2, "Pairing this iPhone with siboot");
     let pairing_path = args.pairing_path();
@@ -481,8 +504,8 @@ async fn pipeline(args: &Args) -> Result<()> {
     ui::done(&session.team);
 
     ui::step(5, "Signing for this iPhone");
-    let (ipa, target) = sign::fetch_ipa(args).await?;
-    let signed = sign::sign(&mut session, &ipa, &device, target).await?;
+    let ipa = ipa.ok_or_else(|| Fail::new("NexSideloader has no IPA to sign.", "step 1 got none"))?;
+    let signed = sign::sign(&mut session, &ipa.path, &device, ipa.target).await?;
     ui::done(&match &signed.version {
         Some(version) => format!("{} {version} signed", signed.name),
         None => format!("{} signed", signed.name),

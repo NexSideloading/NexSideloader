@@ -18,6 +18,8 @@ connected, and Open Minis 1.16 or later. Then, in Open Minis's terminal:
 wget -qO- https://raw.githubusercontent.com/FrizzleM/NexSideloader/main/minis/install.sh | sh
 ```
 
+Where GitHub is blocked, see [below](#where-github-is-blocked).
+
 NexSideloader opens a page over the terminal, in Minis's own browser
 ([below](#the-page)), that shows each step and asks its questions. The first
 time, it pairs this iPhone with itself: the page says what to do, and when you
@@ -33,7 +35,9 @@ uses the pairing file it saved and doesn't ask. Then choose whether to install S
 or SideStore+LiveContainer, then your Apple Account email, password and
 verification code, and, if the account is on more than one
 developer team (a paid membership and the free team every account has, say),
-which team signs ([below](#more-than-one-team)). Keep Minis open until NexSideloader
+which team signs ([below](#more-than-one-team)). The next time, NexSideloader offers
+the Apple Accounts that signed in before, and asks for no password or code
+while Apple's sign-in lasts ([below](#saved-apple-accounts)). Keep Minis open until NexSideloader
 says it's done: iOS pauses it in the background. The first time, trust your Apple Account in Settings ›
 General › VPN & Device Management. Free accounts' apps last 7 days;
 SideStore can renew itself from then on. A paid team's
@@ -49,10 +53,49 @@ To answer in the terminal instead, add `-s -- --terminal` after `sh` (or run
 `NexSideloader --terminal` once it's installed).
 
 [`install.sh`](install.sh) downloads [`bin/NexSideloader-aarch64`](bin) from this
-repository (a progress bar on one line while it does), checks it against the
-SHA-256 the script carries, keeps it at `~/.NexSideloader/bin/NexSideloader` (and
+repository (a progress bar on one line while it does), or through jsDelivr
+where GitHub doesn't answer, checks it against the SHA-256 the script carries,
+keeps it at `~/.NexSideloader/bin/NexSideloader` (and
 `/usr/local/bin/NexSideloader`), and runs it. After that, `NexSideloader` on its own runs it
 again without downloading.
+
+## Where GitHub is blocked
+
+NexSideloader comes from GitHub, and so does the app it installs, and GitHub is
+blocked in places: release downloads are, in mainland China and Iran. A VPN
+gets through, but iOS runs one VPN at a time, and LocalDevVPN has to be the one
+that's on once NexSideloader talks to the iPhone. So it needs GitHub only before
+that:
+
+- **NexSideloader itself.** `install.sh` tries GitHub, then the same file
+  through jsDelivr's CDNs (`fastly.jsdelivr.net`, `gcore.jsdelivr.net`,
+  `cdn.jsdelivr.net`), and runs only a binary that matches the SHA-256 it
+  carries, wherever it came from. Where raw.githubusercontent.com doesn't
+  answer, get the script through jsDelivr too:
+
+  ```sh
+  wget -qO- https://fastly.jsdelivr.net/gh/NexSideloading/NexSideloader@main/minis/install.sh | sh
+  ```
+
+  jsDelivr can be up to 12 hours behind GitHub, so that may install the
+  NexSideloader before the newest. It's blocked at times too: if nothing
+  answers, turn on a VPN that reaches GitHub for this.
+- **The app.** Step 1 downloads the chosen nightly (SideStore, or
+  SideStore+LiveContainer) before it dials the iPhone, over whatever VPN is
+  on, and keeps it in `~/.siboot/downloads`. So run NexSideloader with the VPN
+  that reaches GitHub on: once the IPA is downloaded and nothing answers at
+  10.7.0.1, it asks you to connect LocalDevVPN, and carries on when you tap
+  **Continue**. A later run asks GitHub only for the download's headers (one
+  HEAD, nothing downloaded) and downloads again only when the nightly has
+  changed. When GitHub doesn't answer at all, it installs the kept copy, and
+  says so. With nothing kept, it stops and says how to get it.
+- **An IPA of your own.** `NexSideloader --ipa PATH` installs one from a file,
+  with no download: mount the folder it's in (Minis › Settings › Mount External
+  Folders), and run `NexSideloader --ipa /var/minis/mounts/<folder>/<app>.ipa`.
+
+Apple's sign-in server and the anisette servers aren't GitHub, but step 4
+reaches them with LocalDevVPN on, so they have to answer without the other
+VPN.
 
 ## The screen
 
@@ -82,8 +125,9 @@ about 45 columns), and the live area kept shorter than the screen, so it redraws
 in place. With `--plain` or `--verbose`, `TERM=dumb`, `SIBOOT_PLAIN` set, or
 without a terminal on both ends, NexSideloader prints plain lines instead, one per
 event, as before. `cargo run --example screens` plays the screen through a
-made-up run, on a Mac and without an iPhone (`-- stop`, `-- teams` and
-`-- --plain` for the others).
+made-up run, on a Mac and without an iPhone (`-- stop`, `-- saved`,
+`-- teams`, `-- moved`, `-- nowhere`, `-- vpn`, `-- blocked` and `-- --plain`
+for the others).
 
 ## The page
 
@@ -155,19 +199,50 @@ file is.
 
 | # | Step | How |
 |---|---|---|
-| 1 | Check | GitHub and Apple's sign-in server answer; the iPhone answers RPPairing on `10.7.0.1:49152` through LocalDevVPN |
-| 2 | Pairing | the file saved in `~/.NexSideloader` on an earlier run, while the iPhone accepts it; else the one siboot-pair offers on `127.0.0.1:61207`, for its transfer code (20 s for each answer), when it's offering; else a new pairing, made here ([below](#pairing-in-minis)); then pair-verified with the iPhone |
+| 1 | Check | Apple's sign-in server answers; the chosen app's nightly is downloaded, or the copy kept from an earlier run when the nightly hasn't changed or GitHub doesn't answer ([above](#where-github-is-blocked)); the iPhone answers RPPairing on `10.7.0.1:49152` through LocalDevVPN, or on the port its pairing service has instead ([below](#the-pairing-port)), and when nothing answers, NexSideloader asks for LocalDevVPN and dials again |
+| 2 | Pairing | the file saved in `~/.siboot` on an earlier run, while the iPhone accepts it; else the one siboot-pair offers on `127.0.0.1:61207`, for its transfer code (20 s for each answer), when it's offering; else a new pairing, made here ([below](#pairing-in-minis)); then pair-verified with the iPhone |
 | 3 | Connect | pair-verify → `createListener` → TLS-PSK → CDTunnel → software TCP → RSD, as `tunnel_create_rppairing_multihost` does; lockdownd gives the UDID |
-| 4 | Apple ID | rust-core's `apple_session.rs`, compiled unchanged: saved token first, then GrandSlam + 2FA, Mac-ADI anisette servers in SideInstaller's Auto order; then the team, picked when Apple lists more than one ([below](#more-than-one-team)) |
-| 5 | Sign | choose SideStore or SideStore+LiveContainer, download the IPA, sign with isideload's `sign_app` (device registered, app group, no Increased Memory Limit), as Side by Side does |
+| 4 | Apple ID | the Apple Account picked from those saved, or typed, and its saved token before any password ([below](#saved-apple-accounts)); then rust-core's `apple_session.rs`, compiled unchanged: saved token first, then GrandSlam + 2FA, Mac-ADI anisette servers in SideInstaller's Auto order; then the team, picked when Apple lists more than one ([below](#more-than-one-team)) |
+| 5 | Sign | the IPA from step 1 (SideStore or SideStore+LiveContainer, chosen there), signed with isideload's `sign_app` (device registered, app group, no Increased Memory Limit), as Side by Side does |
 | 6 | Install | AFC upload to `/PublicStaging`, every file checked, `installation_proxy` with `PackageType: Developer` |
 | 7 | Hand over | house_arrest writes the pairing files to the app's Documents folder: `PairingFile_Lockdown.plist`, `PairingFile_RemoteRP.plist`, and `ALTPairingFile.mobiledevicepairing` |
 
 `NexSideloader check` runs step 1 only, and `NexSideloader connect` steps 1–3.
 `SIBOOT_APPLE_ID` and `SIBOOT_PASSWORD` skip the prompts. Everything is kept in
-`~/.NexSideloader`: the pairing file (mode 600), isideload's store (signing key,
-anisette identity, saved token) and the download. The password is never
-written anywhere.
+`~/.siboot`: the pairing file (mode 600), isideload's store (signing key,
+anisette identity, saved token), the saved Apple Accounts' emails
+(`apple-accounts`, mode 600) and the downloaded app
+(`downloads/SideStore.ipa` or `downloads/LiveContainer.ipa`, what it is in
+`SideStore.json` or `LiveContainer.json`). The password is never written
+anywhere.
+
+## The pairing port
+
+NexSideloader reaches the iPhone's pairing service (remotepairingd's RPPairing
+listener) at `10.7.0.1:49152` through LocalDevVPN, as SideInstaller and
+StikDebug do. That port isn't fixed. The listener takes whatever port iOS hands
+it when it starts, and iOS hands TCP ports out in order from 49152, not at
+random (`net.inet.tcp.randomize_ports` is 0, as on a Mac). Started first after
+a restart, it gets 49152; started after something else, a later one. On
+2026-11-18 an iPhone on a Wi-Fi advertised its pairing service
+(`_remotepairing._tcp`) on 55021, while users with Developer Mode on and
+LocalDevVPN connected saw it stop with "The iPhone refused the connection
+at 10.7.0.1:49152".
+
+When 49152 refuses, or what answers there isn't the pairing
+service, NexSideloader knocks on the iPhone's other dynamic ports, 49153 to 65535
+without lockdownd's 62078, 32 at a time through LocalDevVPN, and takes the
+first that answers the pairing handshake ([`src/preflight.rs`](src/preflight.rs)).
+The later steps dial that port. A closed port refuses at once, so this takes
+seconds: from a Mac over Wi-Fi, all 16,382 took 24 s. It stops early, with its
+own advice, after 64 connections in a row that neither refuse nor connect
+(LocalDevVPN has gone), when more than 48 ports take the connection (something
+other than this iPhone answers there, like another VPN or a proxy), or when
+Minis keeps running out of connections.
+
+Minis's shell can't browse Bonjour itself. `minis-bonjour browse` and
+`resolve` might give the advertised port, but whether `resolve` reaches the
+iPhone's own service hasn't been tried, so NexSideloader doesn't count on it.
 
 ## More than one team
 
@@ -193,6 +268,43 @@ free team signs lasts 7 days, what a paid team signs, a year.
 - The team's ID ends SideInstaller's bundle ID, so picking another team than
   last time installs a second copy beside the first.
 - Back, Esc or an empty answer stops the run, and no log is offered.
+
+## Saved Apple Accounts
+
+Since 0.20.0 siboot remembers the Apple Accounts that sign in with it, so a
+later run needn't ask for them ([`src/saved.rs`](src/saved.rs)):
+
+- After a sign-in, the account's email goes first in `~/.siboot/apple-accounts`
+  (one a line, mode 600, seven at most), and the first time, step 4 says so.
+  The first run of 0.20.0 starts that list with the accounts that signed in
+  with an earlier siboot, from the tokens they left (below), the latest first.
+- The next run asks **Sign in with which Apple Account?**: each saved one, the
+  last used first, then **Another Apple Account**, the email field as before
+  (Cancel comes back to the menu), and **Forget an Apple Account**, which asks
+  which one, then yes or no. Forgetting one takes its email off the list and
+  deletes its saved token, but keeps its signing key, as SideInstaller does
+  when it removes an Apple ID: signing in with it again makes no new
+  certificate. Back, Esc or an empty answer at the menu stops the run.
+- The password isn't saved: Minis's shell has no keychain to keep it in. What
+  spares it is the developer token `apple_session.rs` saves after a sign-in, as
+  SideInstaller does. `open` takes the password before it tries the token, so
+  siboot tries the token first itself ([`src/account.rs`](src/account.rs)), the
+  way `open` does but never logging in: on a GrandSlam client without the URL
+  bag, then on one with it, through each anisette server in turn. When Apple
+  takes it, step 4 says "signed in without the password", with no
+  verification code either.
+- When the token has expired (Apple's expiry, ten minutes early, as
+  `apple_session.rs` reads it), or Apple turns it down, step 4 says the saved
+  sign-in has run out and asks for the password, and the sign-in goes on as
+  before. When no server gets the token to Apple, or Apple is limiting
+  sign-ins, siboot stops as it would have with the password: `open` doesn't
+  log in for those either.
+- `--apple-id` or `SIBOOT_APPLE_ID` skips the menu, and the token is still
+  tried first. `SIBOOT_PASSWORD` skips that try; `open` then tries the token
+  itself.
+
+How long Apple's token lasts hasn't been measured here: Apple states it in the
+token, and Show details (or `--verbose`) says how long it has left.
 
 ## Pairing in Minis
 
@@ -280,7 +392,15 @@ A static non-PIE executable, like the `pair_host` Minis's own packages ship.
 To publish a new build, copy it to `bin/NexSideloader-aarch64` and put its
 `sha256sum` in `install.sh`'s `SHA256`, and its size in bytes in `SIZE`, in the
 same commit: the script refuses a binary that doesn't match (`SIZE` only draws
-its progress bar).
+its progress bar). Once it's pushed, have jsDelivr fetch both again, or its
+CDNs keep the old pair for up to 12 hours and the mirrors refuse the new
+script's binary:
+
+```sh
+for f in install.sh bin/NexSideloader-aarch64; do
+  curl -fsS "https://purge.jsdelivr.net/gh/NexSideloading/NexSideloader@main/minis/$f"
+done
+```
 
 ## Tests
 
@@ -302,7 +422,15 @@ wrong ones, something that isn't a pairing file, nothing offered, no code
 typed), argument
 parsing, the bundle walk, 2FA answers, server order, the sign-in errors that
 stop it, which teams in a listTeams answer are free or paid and how the
-question lists them, install refusals, and rust-core's own `apple_session.rs` and
+question lists them, the saved Apple Accounts (the order, at most seven,
+forgetting one, a hand-edited file, mode 600, the menu's choices), the saved
+token (read where `apple_session.rs` keeps it, until ten minutes before its
+expiry, one naming another account or unreadable, which of Apple's answers
+turn it down) and the accounts that signed in before 0.20.0 starting the list,
+the app's download against a stand-in for GitHub (the nightly
+downloaded once and kept, a changed one downloaded again, GitHub blocked with a kept
+copy and with none, `check` downloading
+nothing, `--ipa` as a path and as a URL), install refusals, and rust-core's own `apple_session.rs` and
 `error_text.rs` tests. A test also stands in for a rootshell that iOS has
 paused: the connection goes through and nothing answers. The page's server is
 tested over real loopback connections: paths without the key, another Host,
@@ -314,8 +442,12 @@ closing. siboot-pair's own tests, with the same fake iPhone, are in
 [`../rootshell`](../rootshell#tests).
 
 `cargo run --example screens` plays pairing in Minis as the page and the live
-screen show it (`-- rootshell` plays rootshell's hand-off instead, and
-`-- teams` asks which of two teams signs).
+screen show it (`-- rootshell` plays rootshell's hand-off instead,
+`-- teams` asks which of two teams signs, `-- saved` offers two saved Apple
+Accounts, `-- saved run-out` one whose saved sign-in has run out,
+`-- moved` and `-- nowhere` look for a pairing service that isn't on 49152,
+`-- vpn` downloads the nightly over another VPN and then asks for
+LocalDevVPN, and `-- blocked` installs the nightly an earlier run kept).
 
 ## What's been tested
 
@@ -410,6 +542,60 @@ Modified to install SideStore instead of SideInstaller. Previously tested:
   ran `check` there. Not signed in to Apple with an account on two teams yet,
   so the free-or-paid rule is AltSign's, not yet seen against Apple's answer
   here.
+- **0.19.1** looks for the iPhone's pairing service on its other ports when
+  49152 refuses, or answers as something else ([above](#the-pairing-port));
+  with the service on 49152 nothing changes. Tested on macOS (108 tests, the
+  new ones against stand-ins on the loopback: the pairing service, a listener
+  that takes the connection and says nothing, one that answers something
+  else, and closed ports), and from a Mac against an iPhone 16 on the same
+  Wi-Fi: started at a closed port and at a silent one, `siboot check` found
+  the pairing service on 49152 within 0.1 s, and with 49152 left out, all
+  16,382 other ports took 24 s and only 54666 took the connection. Also
+  through `examples/screens.rs -- moved` and `-- nowhere`, as the page at an
+  iPhone's size and as plain lines. Not run in Minis on an iPhone whose
+  service has moved, so how fast it goes through LocalDevVPN isn't known yet.
+- **0.20.0** remembers the Apple Accounts that sign in, offers them the next
+  time, and signs in with the token saved with one before asking for the
+  password ([above](#saved-apple-accounts)). Until now siboot asked for the
+  password every time, and `open` didn't use it while the token worked.
+  Tested on macOS and Alpine aarch64 (121 tests, the new ones on the list's
+  file, the saved token as `apple_session.rs` writes it, and which of Apple's
+  answers turn it down), and through `examples/screens.rs -- saved` as the
+  page at an iPhone's size (an account picked and signed in without the
+  password, one forgotten, Another Apple Account cancelled back to the menu,
+  and a new one typed, with the line saying it's kept), on a 45-column live
+  screen and as plain lines (`-- saved run-out` too); the static build ran
+  `--version` in Alpine. Not signed in to Apple with a saved token yet, so
+  siboot's own try of it hasn't met Apple's answers here.
+- **0.20.1** signs in again: since 2026-11-20 Apple has answered every
+  sign-in through the Mac anisette servers with HTTP 503 (#153), turning away
+  any client that calls its system `macOS`, and siboot reported a Mac on
+  macOS 26.6. It now reports one on macOS 10.15.7, the newest that still says
+  `Mac OS X` (SideInstaller 2.1.1's isideload, through the submodule). It also
+  starts on anisette.lillq.me, a pool that hands out a client Apple lets
+  through: first, or after the servers that share the last good one's
+  anisette identity (and with it the saved token), since lillq's work nowhere
+  else. Tested on macOS (121 tests) and through rust-core's `apple_session`
+  with a made-up account: `init` through lillq and new.ani.sidestore.io got
+  Apple's -20970 where 0.20.0's Mac gets 503. The static build ran
+  `--version` in Alpine. Not signed in with a real account yet.
+- **0.21.0** works where GitHub is blocked ([above](#where-github-is-blocked)):
+  step 1 downloads the app before it dials the iPhone and keeps it,
+  asks for LocalDevVPN when nothing answers there afterwards, and installs the
+  kept copy when GitHub doesn't answer; `install.sh` falls back to jsDelivr.
+  Tested on macOS (133 tests) and with the static build in Alpine, GitHub
+  blocked through the VM's own `/etc/hosts`: with nothing kept (it stops and
+  says how to get the app), GitHub answering (the nightly downloaded and kept),
+  github.com refused, github.com
+  and then the release download taking the connection and never answering
+  (each given up after 20 s, the kept copy installed), and the release download
+  refused with an older copy kept. On macOS the page showed the Connect
+  LocalDevVPN card after a real download, and the next runs didn't download
+  again. `install.sh` with nothing but busybox: a refused source, a stale copy
+  and one that never answers (dropped after 30 s) each passed over for the
+  next, and with raw.githubusercontent.com blocked it installed 0.20.1 from
+  fastly.jsdelivr.net. Not run on an iPhone, nor from inside a country that
+  blocks GitHub.
 
 - **Unreleased** drops `NexSideloader developer-mode` (and `--turn-on`): the
   AMFI requests it sent never worked. Developer Mode is turned on in Settings
@@ -420,5 +606,5 @@ Modified to install SideStore instead of SideInstaller. Previously tested:
 
 Not tested yet with SideStore: other iPhones and iOS versions, an Apple Account on
 more than one team, one at its certificate or App ID limit (NexSideloader then
-asks which certificate to revoke), and a second run after the 7-day profile
-expires.
+asks which certificate to revoke), a second run after the 7-day profile
+expires, and signing in with a saved account's token, without the password.

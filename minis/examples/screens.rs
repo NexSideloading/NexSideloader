@@ -7,6 +7,12 @@
 //! cargo run --example screens -- stop          # one that stops at Connect
 //! cargo run --example screens -- old-minis     # in an Open Minis before 1.16
 //! cargo run --example screens -- teams         # an Apple Account on two teams
+//! cargo run --example screens -- saved         # two saved Apple Accounts
+//! cargo run --example screens -- saved run-out # whose saved sign-in has run out
+//! cargo run --example screens -- moved         # the pairing service on 55021
+//! cargo run --example screens -- nowhere       # and on no port at all
+//! cargo run --example screens -- vpn           # another VPN on, then LocalDevVPN
+//! cargo run --example screens -- blocked       # GitHub blocked, the nightly kept
 //! cargo run --example screens -- --plain       # the same, as plain lines
 //! cargo run --example screens -- --web         # the same, as the page
 //! ```
@@ -23,6 +29,8 @@
 
 #![allow(dead_code)]
 
+#[path = "../src/saved.rs"]
+mod saved;
 #[path = "../src/team.rs"]
 mod team;
 #[path = "../src/ui.rs"]
@@ -55,15 +63,34 @@ fn main() {
         web::wait_for_page(Duration::from_secs(600));
     }
     let stop = has("stop");
+    let port = if has("moved") {
+        Port::Moved
+    } else if has("nowhere") {
+        Port::Nowhere
+    } else {
+        Port::Usual
+    };
+    let github = if has("vpn") {
+        Github::OtherVpn
+    } else if has("blocked") {
+        Github::Blocked
+    } else {
+        Github::Answers
+    };
+    let remembered = match (has("saved"), has("run-out")) {
+        (true, false) => Some(Remembered::Lasting),
+        (true, true) => Some(Remembered::RunOut),
+        _ => None,
+    };
     let code = if has("old-minis") {
         old_minis();
         1
-    } else if run(stop, has("rootshell"), has("teams")) {
+    } else if run(stop, has("rootshell"), has("teams"), port, github, remembered) {
         0
     } else {
         1
     };
-    if stop && ui::confirm("copy the log to the clipboard?", true) {
+    if (stop || port == Port::Nowhere) && ui::confirm("copy the log to the clipboard?", true) {
         let log = ui::recorded().join("\n");
         let copied = std::process::Command::new("pbcopy")
             .env("LANG", "en_US.UTF-8")
@@ -107,36 +134,134 @@ fn old_minis() {
     );
 }
 
-fn run(stop: bool, rootshell: bool, teams: bool) -> bool {
+/// Where step 1 finds the iPhone's pairing service (preflight.rs).
+#[derive(Clone, Copy, PartialEq)]
+enum Port {
+    /// On 49152, as nearly always.
+    Usual,
+    /// 49152 refuses, and the look through the other ports finds it.
+    Moved,
+    /// Nothing answers as it on any port.
+    Nowhere,
+}
+
+/// How GitHub answers step 1 (download.rs, preflight.rs).
+#[derive(Clone, Copy, PartialEq)]
+enum Github {
+    /// Through LocalDevVPN, as it does where GitHub isn't blocked.
+    Answers,
+    /// Through another VPN, on to reach it where it's blocked: the nightly
+    /// downloads, nothing answers at 10.7.0.1, and siboot asks for LocalDevVPN.
+    OtherVpn,
+    /// Not at all, so siboot installs the nightly an earlier run kept.
+    Blocked,
+}
+
+/// Step 1's download of the app, before the iPhone is dialed.
+fn get_ipa(github: Github) {
+    ui::activity("asking GitHub about SideStore's nightly");
+    wait(600);
+    if github == Github::Blocked {
+        ui::warn(
+            "Couldn't reach GitHub, so siboot installs SideStore nightly, downloaded on an \
+             earlier run.",
+        );
+        return;
+    }
+    ui::status("downloading SideStore nightly");
+    let total: u64 = 24 * 1_048_576 + 400_000;
+    for i in 0..=50u64 {
+        ui::progress("downloaded", total * i / 50, total);
+        wait(45);
+    }
+    ui::progress_end();
+    ui::ok("downloaded SideStore nightly (24.4 MB)");
+}
+
+/// Step 1's dial of the pairing service, and the look through the iPhone's
+/// other ports that follows a refusal.
+fn reach(port: Port, github: Github) -> bool {
+    ui::activity("reaching this iPhone at 10.7.0.1:49152");
+    wait(500);
+    if github == Github::OtherVpn {
+        wait(1500);
+        ui::detail("nothing answers at 10.7.0.1:49152: connect timed out after 8 s");
+        ui::status("connect LocalDevVPN when you're ready");
+        if !ui::get_ready(
+            "Connect LocalDevVPN",
+            &[
+                "Open LocalDevVPN and connect it. iOS runs one VPN at a time, so it takes the \
+                 place of any other: siboot has the app already, and doesn't need GitHub \
+                 again.",
+                "Come back to Minis once LocalDevVPN shows Connected.",
+            ],
+            &[],
+            "Continue",
+        ) {
+            ui::failure("Stopped before LocalDevVPN was connected.", "");
+            return false;
+        }
+        ui::activity("reaching this iPhone at 10.7.0.1:49152");
+        wait(500);
+    }
+    if port == Port::Usual {
+        ui::ok("this iPhone answers on 10.7.0.1:49152 (RPPairing, wire protocol 26)");
+        return true;
+    }
+    ui::detail(
+        "no pairing service at 10.7.0.1:49152: Connection refused (os error 111) \
+         (ConnectionRefused)",
+    );
+    ui::status("looking for this iPhone's pairing service on its other ports");
+    // 55021 is 5869 of the 16382 ports in; nowhere knocks on all of them.
+    let last = if port == Port::Moved { 35 } else { 100 };
+    for percent in 0..=last {
+        ui::percent("ports checked", percent);
+        wait(40);
+    }
+    ui::progress_end();
+    if port == Port::Nowhere {
+        ui::failure(
+            "The iPhone refused the connection at 10.7.0.1:49152, and no other port on it answers \
+             as its pairing service. Turn on Developer Mode (Settings › Privacy & Security › \
+             Developer Mode), and check Wi-Fi is on. If both are on, restart the iPhone, connect \
+             LocalDevVPN again and run siboot again.",
+            "Connection refused (os error 111) (ConnectionRefused); no other port answered as it \
+             (16382 knocked on in 4.1 s; took the connection: 54666)",
+        );
+        return false;
+    }
+    ui::detail("found it on port 55021 after 5869 of 16382 ports, in 1.4 s");
+    ui::ok("this iPhone answers on 10.7.0.1:55021 (RPPairing, wire protocol 26)");
+    true
+}
+
+fn run(
+    stop: bool,
+    rootshell: bool,
+    teams: bool,
+    port: Port,
+    github: Github,
+    remembered: Option<Remembered>,
+) -> bool {
     let steps = [
         "Check", "Pairing", "Connect", "Apple ID", "Sign", "Install", "Handover",
     ];
     ui::header("0.18.0", "Installs SideStore or SideStore+LiveContainer on this iPhone.");
     ui::plan(&steps, 7);
 
-    ui::step(1, "Checking LocalDevVPN, this iPhone and the internet");
-    for (what, took, answer) in [
-        (
-            "reaching GitHub",
-            700,
-            "GitHub answers",
-        ),
-        (
-            "reaching Apple's sign-in server",
-            600,
-            "Apple's sign-in server answers",
-        ),
-        (
-            "reaching this iPhone at 10.7.0.1:49152",
-            500,
-            "this iPhone answers on 10.7.0.1:49152",
-        ),
-    ] {
-        ui::activity(what);
-        wait(took);
-        ui::ok(answer);
+    ui::step(1, "Checking the internet, LocalDevVPN and this iPhone");
+    ui::activity("checking this Open Minis");
+    wait(400);
+    ui::ok("this Open Minis is 1.16 or later");
+    ui::activity("reaching Apple's sign-in server");
+    wait(600);
+    ui::ok("Apple's sign-in server answers");
+    get_ipa(github);
+    if !reach(port, github) {
+        return false;
     }
-    ui::done("online, and the iPhone answers");
+    ui::done("SideStore nightly · the iPhone answers");
 
     ui::step(2, "Pairing this iPhone with siboot");
     ui::activity("checking that Open Minis can pair this iPhone");
@@ -171,15 +296,129 @@ fn run(stop: bool, rootshell: bool, teams: bool) -> bool {
     ui::done("Frizzle's iPhone · iOS 27.1");
 
     ui::step(4, "Signing in to your Apple Account");
-    let Some(email) = ui::ask_text(
+    let picked = match remembered {
+        Some(_) => saved_account(),
+        None => ask_email().map(|_| Picked::Typed),
+    };
+    let Some(picked) = picked else {
+        ui::failure("No Apple Account given.", "");
+        return false;
+    };
+    let with_password = match picked {
+        Picked::Saved if remembered == Some(Remembered::Lasting) => false,
+        Picked::Saved => {
+            ui::note(saved::RUN_OUT);
+            true
+        }
+        Picked::Typed => true,
+    };
+    if with_password {
+        if !password_and_code() {
+            return false;
+        }
+    } else {
+        ui::status("signing in through new.ani.sidestore.io");
+        wait(1400);
+        ui::detail("used the saved sign-in: Apple's sign-in lasts 341d 7h more");
+    }
+    let (name, id, kind, first) = if teams {
+        // In Apple's order, which account.rs keeps: here the free team first.
+        let listed = [
+            ("Frizzle", "ABCDE12345", team::Kind::Free),
+            ("Frizzle", "FGHIJ67890", team::Kind::Paid),
+        ];
+        ui::status("reading your teams");
+        wait(700);
+        let labels: Vec<String> = listed
+            .iter()
+            .map(|(name, id, kind)| team::label(Some(name), id, *kind))
+            .collect();
+        ui::status(&team::found(listed.len()));
+        ui::note(team::NOTE);
+        let Some(i) = ui::choose(team::QUESTION, &labels) else {
+            ui::failure("No developer team picked.", "");
+            return false;
+        };
+        let (name, id, kind) = listed[i];
+        (name, id, kind, i == 0)
+    } else {
+        ("Frizzle", "ABCDE12345", team::Kind::Unknown, true)
+    };
+    let summary = team::summary(Some(name), id, kind);
+    ui::ok(&if with_password {
+        format!("signed in — {summary}")
+    } else {
+        format!("signed in without the password — {summary}")
+    });
+    if picked == Picked::Typed {
+        ui::note(saved::SAVED);
+    }
+    ui::done(&summary);
+    sign_and_install(id, kind, first)
+}
+
+fn ask_email() -> Option<String> {
+    ui::ask_text(
         "sign in to your Apple Account",
         "Email",
         "your Apple Account",
         "Apple Account email: ",
-    ) else {
-        ui::failure("No Apple Account given.", "");
-        return false;
-    };
+    )
+}
+
+/// What the sign-in has saved, in `-- saved`.
+#[derive(Clone, Copy, PartialEq)]
+enum Remembered {
+    /// Two Apple Accounts, and the first one's sign-in still works.
+    Lasting,
+    /// The same, but Apple wants the password again.
+    RunOut,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum Picked {
+    Saved,
+    Typed,
+}
+
+/// The menu of saved Apple Accounts, as account.rs's `which_account` asks it:
+/// one picked, another typed, or one forgotten and the menu again.
+fn saved_account() -> Option<Picked> {
+    let mut accounts = vec![
+        "frizzle@icloud.com".to_string(),
+        "frizzle.work@example.com".to_string(),
+    ];
+    loop {
+        if accounts.is_empty() {
+            return ask_email().map(|_| Picked::Typed);
+        }
+        let index = ui::choose(saved::QUESTION, &saved::options(&accounts))?;
+        match saved::picked(index, accounts.len()) {
+            saved::Pick::Account(_) => return Some(Picked::Saved),
+            saved::Pick::Another => {
+                if ask_email().is_some() {
+                    return Some(Picked::Typed);
+                }
+            }
+            saved::Pick::Forget => {
+                let index = match accounts.as_slice() {
+                    [_] => Some(0),
+                    _ => ui::choose(saved::FORGET_WHICH, &accounts),
+                };
+                if let Some(i) = index {
+                    if ui::confirm(&format!("forget {}?", accounts[i]), false) {
+                        let email = accounts.remove(i);
+                        ui::ok(&format!("forgot {email} and its saved sign-in"));
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// The password, a server that doesn't answer, and Apple's code. False once
+/// the run has stopped.
+fn password_and_code() -> bool {
     let password = ui::ask_secret(
         "sign in to your Apple Account",
         "Password",
@@ -249,42 +488,12 @@ fn run(stop: bool, rootshell: bool, teams: bool) -> bool {
     }
     ui::status("checking the code with Apple");
     wait(900);
-    let (name, id, kind, first) = if teams {
-        // In Apple's order, which account.rs keeps: here the free team first.
-        let listed = [
-            ("Frizzle", "ABCDE12345", team::Kind::Free),
-            ("Frizzle", "FGHIJ67890", team::Kind::Paid),
-        ];
-        ui::status("reading your teams");
-        wait(700);
-        let labels: Vec<String> = listed
-            .iter()
-            .map(|(name, id, kind)| team::label(Some(name), id, *kind))
-            .collect();
-        ui::status(&team::found(listed.len()));
-        ui::note(team::NOTE);
-        let Some(i) = ui::choose(team::QUESTION, &labels) else {
-            ui::failure("No developer team picked.", "");
-            return false;
-        };
-        let (name, id, kind) = listed[i];
-        (name, id, kind, i == 0)
-    } else {
-        ("Frizzle", "ABCDE12345", team::Kind::Unknown, true)
-    };
-    let summary = team::summary(Some(name), id, kind);
-    ui::ok(&format!("signed in as {email} — {summary}"));
-    ui::done(&summary);
+    true
+}
 
+/// Steps 5 to 7, signed by team `id`.
+fn sign_and_install(id: &str, kind: team::Kind, first: bool) -> bool {
     ui::step(5, "Signing SideStore for this iPhone");
-    ui::status("downloading SideStore");
-    let total: u64 = 24 * 1_048_576 + 400_000;
-    for i in 0..=60u64 {
-        ui::progress("downloaded", total * i / 60, total);
-        wait(45);
-    }
-    ui::progress_end();
-    ui::ok("downloaded SideStore (24.4 MB)");
     ui::status("signing; this takes a while here");
     wait(4200);
     ui::ok(&format!("signed SideStore as com.SideStore.SideStore.{id}"));

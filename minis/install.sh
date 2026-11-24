@@ -7,14 +7,27 @@
 #
 #   wget -qO- https://raw.githubusercontent.com/NexSideloading/NexSideloader/main/minis/install.sh | sh
 #
+# Where raw.githubusercontent.com is blocked (mainland China, Iran), the same
+# script through jsDelivr:
+#
+#   wget -qO- https://fastly.jsdelivr.net/gh/NexSideloading/NexSideloader@main/minis/install.sh | sh
+#
 # Afterwards `NexSideloader` runs it again, without downloading.
 set -eu
 
-BASE="${SIBOOT_BASE:-https://raw.githubusercontent.com/NexSideloading/NexSideloader/main/minis}"
-# Of bin/NexSideloader-aarch64, updated with it: a download that doesn't match (an
-# error page, a cut-off transfer) is never run. SIZE only draws the progress
-# bar.
-SHA256=61b08ed847a8fcfb120235015e723f1a62098cbf6f18da6507480bd2f0c4b72e
+# Where bin/NexSideloader-aarch64 comes from, tried in order: GitHub, then the
+# same file through jsDelivr's CDNs, which can get through where GitHub's raw
+# files don't. Whichever answers, the copy has to match SHA256, so a mirror
+# can't change what runs. SIBOOT_BASE replaces the list (one URL, or several).
+SOURCES="https://raw.githubusercontent.com/NexSideloading/NexSideloader/main/minis
+https://fastly.jsdelivr.net/gh/NexSideloading/NexSideloader@main/minis
+https://gcore.jsdelivr.net/gh/NexSideloading/NexSideloader@main/minis
+https://cdn.jsdelivr.net/gh/NexSideloading/NexSideloader@main/minis"
+SOURCES="${SIBOOT_BASE:-$SOURCES}"
+# Of bin/NexSideloader-aarch64, updated with it: a download that doesn't match
+# (an error page, a cut-off transfer, a stale mirror) is never run. SIZE only
+# draws the progress bar.
+SHA256="61b08ed847a8fcfb120235015e723f1a62098cbf6f18da6507480bd2f0c4b72e"
 SIZE=12013040
 
 DIR="$HOME/.NexSideloader/bin"
@@ -51,6 +64,7 @@ say() {
 }
 
 ok() { say ✓ '1;32' "$1"; }
+warn() { say ▲ '1;33' "$1"; }
 
 fail() {
   say ✗ '1;31' "$1" >&2
@@ -62,13 +76,19 @@ case "$(uname -m)" in
   *) fail "NexSideloader runs in Open Minis on an iPhone (aarch64); this is $(uname -m)." ;;
 esac
 
+# Where a host is blocked, its connections can hang instead of failing:
+# give up on one that sends nothing for 30 seconds (busybox wget's own limit
+# is 15 minutes).
 fetch() {
   if command -v curl > /dev/null 2>&1; then
-    curl -fsSL "$1" -o "$2"
+    curl -fsSL --connect-timeout 20 -y 30 -Y 1 "$1" -o "$2"
   else
-    wget -qO "$2" "$1"
+    wget -q -T 30 -O "$2" "$1"
   fi
 }
+
+# "raw.githubusercontent.com" from a URL.
+host() { printf '%s\n' "$1" | cut -d / -f 3; }
 
 sha() { sha256sum "$1" | cut -d ' ' -f 1; }
 
@@ -113,16 +133,16 @@ frame() {
     "$spin" "$(repeat "$full" ━)" "$(repeat $((cells - full)) ─)" "$percent" "$size"
 }
 
-# The download in the background, and a frame every tenth of a second from
-# how much of it has arrived.
+# The download from one source in the background, and a frame every tenth
+# of a second from how much of it has arrived.
 download() {
   rm -f "$BIN.part"
   if [ -z "$FANCY" ]; then
-    echo "downloading NexSideloader ($(megabytes "$SIZE") MB) …"
-    fetch "$BASE/bin/NexSideloader-aarch64" "$BIN.part"
+    echo "downloading NexSideloader ($(megabytes "$SIZE") MB) from $(host "$1") …"
+    fetch "$1/bin/NexSideloader-aarch64" "$BIN.part"
     return
   fi
-  fetch "$BASE/bin/NexSideloader-aarch64" "$BIN.part" < /dev/null 2> /dev/null &
+  fetch "$1/bin/NexSideloader-aarch64" "$BIN.part" < /dev/null 2> /dev/null &
   pid=$!
   i=0
   while kill -0 "$pid" 2> /dev/null; do
@@ -138,17 +158,40 @@ mkdir -p "$DIR"
 if [ -f "$BIN" ] && [ "$(sha "$BIN")" = "$SHA256" ]; then
   ok "NexSideloader is up to date"
 else
-  if ! download; then
+  got=
+  why=
+  mismatched=
+  for base in $SOURCES; do
+    if [ -n "$why" ]; then
+      warn "$why Trying $(host "$base")."
+    fi
+    if download "$base"; then
+      if [ "$(sha "$BIN.part")" = "$SHA256" ]; then
+        got=$base
+        break
+      fi
+      mismatched=1
+      why="The copy from $(host "$base") didn't match its checksum."
+    else
+      why="Couldn't download NexSideloader from $(host "$base")."
+    fi
     rm -f "$BIN.part"
-    fail "Couldn't download NexSideloader. Check the internet connection and try again."
-  fi
-  if [ "$(sha "$BIN.part")" != "$SHA256" ]; then
+  done
+  if [ -z "$got" ]; then
     rm -f "$BIN.part"
-    fail "The NexSideloader download didn't match its checksum. Try again in a few minutes."
+    if [ -n "$mismatched" ]; then
+      fail "The NexSideloader download didn't match its checksum: a new NexSideloader may have just come out. Try again in a few minutes."
+    fi
+    fail "Couldn't download NexSideloader from GitHub or its mirrors. Check the internet connection. Where GitHub is blocked, turn on a VPN that reaches it and run this again: NexSideloader asks for LocalDevVPN once it has what it needs."
   fi
   chmod 755 "$BIN.part"
   mv "$BIN.part" "$BIN"
-  ok "NexSideloader downloaded and checked ($(megabytes "$SIZE") MB)"
+  # Which source, when it wasn't the first.
+  case "$SOURCES" in
+    "$got"*) from= ;;
+    *) from=" from $(host "$got")" ;;
+  esac
+  ok "NexSideloader downloaded$from and checked ($(megabytes "$SIZE") MB)"
 fi
 
 # So `NexSideloader` works on its own from now on (Minis's shell runs as root).
